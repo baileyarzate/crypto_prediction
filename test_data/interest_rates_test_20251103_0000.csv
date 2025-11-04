@@ -1,0 +1,188 @@
+,record_date,security_type_desc,security_desc,avg_interest_rate_amt
+0,2024-11-30,Marketable,Treasury Bills,4.741
+1,2024-11-30,Marketable,Treasury Notes,2.793
+2,2024-11-30,Marketable,Treasury Bonds,3.207
+3,2024-11-30,Marketable,Treasury Inflation-Protected Securities (TIPS),0.783
+4,2024-11-30,Marketable,Treasury Floating Rate Notes (FRN),4.601
+5,2024-11-30,Marketable,Federal Financing Bank,2.434
+6,2024-11-30,Marketable,Total Marketable,3.355
+7,2024-11-30,Non-marketable,Domestic Series,7.577
+8,2024-11-30,Non-marketable,Special Purpose Vehicle,3.489
+9,2024-11-30,Non-marketable,Foreign Series,0.000
+10,2024-11-30,Non-marketable,State and Local Government Series,3.759
+11,2024-11-30,Non-marketable,United States Savings Securities,3.460
+12,2024-11-30,Non-marketable,United States Savings Inflation Securities,3.948
+13,2024-11-30,Non-marketable,Government Account Series,3.037
+14,2024-11-30,Non-marketable,Government Account Series Inflation Securities,1.191
+15,2024-11-30,Non-marketable,Total Non-marketable,3.057
+16,2024-11-30,Interest-bearing Debt,Total Interest-bearing Debt,3.298
+17,2024-12-31,Marketable,Treasury Bills,4.586
+18,2024-12-31,Marketable,Treasury Notes,2.851
+19,2024-12-31,Marketable,Treasury Bonds,3.222
+20,2024-12-31,Marketable,Treasury Inflation-Protected Securities (TIPS),0.797
+21,2024-12-31,Marketable,Treasury Floating Rate Notes (FRN),4.424
+22,2024-12-31,Marketable,Federal Financing Bank,2.434
+23,2024-12-31,Marketable,Total Marketable,3.336
+24,2024-12-31,Non-marketable,Domestic Series,7.577
+25,2024-12-31,Non-marketable,Special Purpose Vehicle,3.286
+26,2024-12-31,Non-marketable,Foreign Series,0.000
+27,2024-12-31,Non-marketable,State and Local Government Series,3.604
+28,2024-12-31,Non-marketable,United States Savings Securities,3.424
+29,2024-12-31,Non-marketable,United States Savings Inflation Securities,3.797
+30,2024-12-31,Non-marketable,Government Account Series,3.029
+31,2024-12-31,Non-marketable,Government Account Series Inflation Securities,1.191
+32,2024-12-31,Non-marketable,Total Non-marketable,3.046
+33,2024-12-31,Interest-bearing Debt,Total Interest-bearing Debt,3.280
+34,2025-01-31,Marketable,Treasury Bills,4.455
+35,2025-01-31,Marketable,Treasury Notes,2.891
+36,2025-01-31,Marketable,Treasury Bonds,3.236
+37,2025-01-31,Marketable,Treasury Inflation-Protected Securities (TIPS),0.793
+38,2025-01-31,Marketable,Treasury Floating Rate Notes (FRN),4.374
+39,2025-01-31,Marketable,Federal Financing Bank,2.434
+40,2025-01-31,Marketable,Total Marketable,3.337
+41,2025-01-31,Non-marketable,Domestic Series,7.577
+42,2025-01-31,Non-marketable,Special Purpose Vehicle,3.257
+43,2025-01-31,Non-marketable,Foreign Series,0.000
+44,2025-01-31,Non-marketable,State and Local Government Series,3.399
+45,2025-01-31,Non-marketable,United States Savings Securities,3.392
+46,2025-01-31,Non-marketable,United States Savings Inflation Securities,3.586
+47,2025-01-31,Non-marketable,Government Account Series,3.032
+48,2025-01-31,Non-marketable,Government Account Series Inflation Securities,1.178
+49,2025-01-31,Non-marketable,Total Non-marketable,3.045
+50,2025-01-31,Interest-bearing Debt,Total Interest-bearing Debt,3.282
+51,2025-02-28,Marketable,Treasury Bills,4.399
+52,2025-02-28,Marketable,Treasury Notes,2.932
+53,2025-02-28,Marketable,Treasury Bonds,3.243
+54,2025-02-28,Marketable,Treasury Inflation-Protected Securities (TIPS),0.801
+55,2025-02-28,Marketable,Treasury Floating Rate Notes (FRN),4.370
+56,2025-02-28,Marketable,Federal Financing Bank,2.434
+57,2025-02-28,Marketable,Total Marketable,3.346
+58,2025-02-28,Non-marketable,Domestic Series,7.577
+59,2025-02-28,Non-marketable,Special Purpose Vehicle,3.257
+60,2025-02-28,Non-marketable,Foreign Series,0.000
+61,2025-02-28,Non-marketable,State and Local Government Series,3.427
+62,2025-02-28,Non-marketable,United States Savings Securities,3.365
+63,2025-02-28,Non-marketable,United States Savings Inflation Securities,3.464
+64,2025-02-28,Non-marketable,Government Account Series,2.980
+65,2025-02-28,Non-marketable,Government Account Series Inflation Securities,1.240
+66,2025-02-28,Non-marketable,Total Non-marketable,2.995
+67,2025-02-28,Interest-bearing Debt,Total Interest-bearing Debt,3.282
+68,2025-03-31,Marketable,Treasury Bills,4.359
+69,2025-03-31,Marketable,Treasury Notes,2.963
+70,2025-03-31,Marketable,Treasury Bonds,3.254
+71,2025-03-31,Marketable,Treasury Inflation-Protected Securities (TIPS),0.812
+72,2025-03-31,Marketable,Treasury Floating Rate Notes (FRN),4.362
+73,2025-03-31,Marketable,Federal Financing Bank,2.434
+74,2025-03-31,Marketable,Total Marketable,3.347
+75,2025-03-31,Non-marketable,Domestic Series,7.577
+76,2025-03-31,Non-marketable,Special Purpose Vehicle,3.257
+77,2025-03-31,Non-marketable,Foreign Series,0.000
+78,2025-03-31,Non-marketable,State and Local Government Series,3.467
+79,2025-03-31,Non-marketable,United States Savings Securities,3.337
+80,2025-03-31,Non-marketable,United States Savings Inflation Securities,3.345
+81,2025-03-31,Non-marketable,Government Account Series,2.985
+82,2025-03-31,Non-marketable,Government Account Series Inflation Securities,1.240
+83,2025-03-31,Non-marketable,Total Non-marketable,3.000
+84,2025-03-31,Interest-bearing Debt,Total Interest-bearing Debt,3.284
+85,2025-04-30,Marketable,Treasury Bills,4.335
+86,2025-04-30,Marketable,Treasury Notes,2.990
+87,2025-04-30,Marketable,Treasury Bonds,3.267
+88,2025-04-30,Marketable,Treasury Inflation-Protected Securities (TIPS),0.853
+89,2025-04-30,Marketable,Treasury Floating Rate Notes (FRN),4.398
+90,2025-04-30,Marketable,Federal Financing Bank,2.434
+91,2025-04-30,Marketable,Total Marketable,3.354
+92,2025-04-30,Non-marketable,Domestic Series,7.577
+93,2025-04-30,Non-marketable,Special Purpose Vehicle,3.257
+94,2025-04-30,Non-marketable,Foreign Series,0.000
+95,2025-04-30,Non-marketable,State and Local Government Series,3.501
+96,2025-04-30,Non-marketable,United States Savings Securities,3.306
+97,2025-04-30,Non-marketable,United States Savings Inflation Securities,3.081
+98,2025-04-30,Non-marketable,Government Account Series,2.983
+99,2025-04-30,Non-marketable,Government Account Series Inflation Securities,1.241
+100,2025-04-30,Non-marketable,Total Non-marketable,2.999
+101,2025-04-30,Interest-bearing Debt,Total Interest-bearing Debt,3.289
+102,2025-05-31,Marketable,Treasury Bills,4.316
+103,2025-05-31,Marketable,Treasury Notes,3.008
+104,2025-05-31,Marketable,Treasury Bonds,3.278
+105,2025-05-31,Marketable,Treasury Inflation-Protected Securities (TIPS),0.865
+106,2025-05-31,Marketable,Treasury Floating Rate Notes (FRN),4.427
+107,2025-05-31,Marketable,Federal Financing Bank,2.434
+108,2025-05-31,Marketable,Total Marketable,3.362
+109,2025-05-31,Non-marketable,Domestic Series,7.577
+110,2025-05-31,Non-marketable,Special Purpose Vehicle,3.305
+111,2025-05-31,Non-marketable,Foreign Series,0.000
+112,2025-05-31,Non-marketable,State and Local Government Series,3.519
+113,2025-05-31,Non-marketable,United States Savings Securities,3.324
+114,2025-05-31,Non-marketable,United States Savings Inflation Securities,3.225
+115,2025-05-31,Non-marketable,Government Account Series,2.977
+116,2025-05-31,Non-marketable,Government Account Series Inflation Securities,1.241
+117,2025-05-31,Non-marketable,Total Non-marketable,2.993
+118,2025-05-31,Interest-bearing Debt,Total Interest-bearing Debt,3.294
+119,2025-06-30,Marketable,Treasury Bills,4.306
+120,2025-06-30,Marketable,Treasury Notes,3.048
+121,2025-06-30,Marketable,Treasury Bonds,3.297
+122,2025-06-30,Marketable,Treasury Inflation-Protected Securities (TIPS),0.875
+123,2025-06-30,Marketable,Treasury Floating Rate Notes (FRN),4.366
+124,2025-06-30,Marketable,Federal Financing Bank,2.389
+125,2025-06-30,Marketable,Total Marketable,3.375
+126,2025-06-30,Non-marketable,Domestic Series,7.577
+127,2025-06-30,Non-marketable,Special Purpose Vehicle,3.257
+128,2025-06-30,Non-marketable,Foreign Series,0.000
+129,2025-06-30,Non-marketable,State and Local Government Series,3.484
+130,2025-06-30,Non-marketable,United States Savings Securities,3.346
+131,2025-06-30,Non-marketable,United States Savings Inflation Securities,3.372
+132,2025-06-30,Non-marketable,Government Account Series,2.967
+133,2025-06-30,Non-marketable,Government Account Series Inflation Securities,1.241
+134,2025-06-30,Non-marketable,Total Non-marketable,2.983
+135,2025-06-30,Interest-bearing Debt,Total Interest-bearing Debt,3.304
+136,2025-07-31,Marketable,Treasury Bills,4.314
+137,2025-07-31,Marketable,Treasury Notes,3.073
+138,2025-07-31,Marketable,Treasury Bonds,3.309
+139,2025-07-31,Marketable,Treasury Inflation-Protected Securities (TIPS),0.894
+140,2025-07-31,Marketable,Treasury Floating Rate Notes (FRN),4.407
+141,2025-07-31,Marketable,Federal Financing Bank,2.389
+142,2025-07-31,Marketable,Total Marketable,3.399
+143,2025-07-31,Non-marketable,Domestic Series,7.577
+144,2025-07-31,Non-marketable,Special Purpose Vehicle,3.286
+145,2025-07-31,Non-marketable,Foreign Series,0.000
+146,2025-07-31,Non-marketable,State and Local Government Series,3.536
+147,2025-07-31,Non-marketable,United States Savings Securities,3.365
+148,2025-07-31,Non-marketable,United States Savings Inflation Securities,3.579
+149,2025-07-31,Non-marketable,Government Account Series,3.138
+150,2025-07-31,Non-marketable,Government Account Series Inflation Securities,1.241
+151,2025-07-31,Non-marketable,Total Non-marketable,3.151
+152,2025-07-31,Interest-bearing Debt,Total Interest-bearing Debt,3.352
+153,2025-08-31,Marketable,Treasury Bills,4.283
+154,2025-08-31,Marketable,Treasury Notes,3.087
+155,2025-08-31,Marketable,Treasury Bonds,3.311
+156,2025-08-31,Marketable,Treasury Inflation-Protected Securities (TIPS),0.901
+157,2025-08-31,Marketable,Treasury Floating Rate Notes (FRN),4.303
+158,2025-08-31,Marketable,Federal Financing Bank,2.389
+159,2025-08-31,Marketable,Total Marketable,3.415
+160,2025-08-31,Non-marketable,Domestic Series,7.577
+161,2025-08-31,Non-marketable,Special Purpose Vehicle,3.179
+162,2025-08-31,Non-marketable,Foreign Series,0.000
+163,2025-08-31,Non-marketable,State and Local Government Series,3.533
+164,2025-08-31,Non-marketable,United States Savings Securities,3.381
+165,2025-08-31,Non-marketable,United States Savings Inflation Securities,3.704
+166,2025-08-31,Non-marketable,Government Account Series,3.173
+167,2025-08-31,Non-marketable,Government Account Series Inflation Securities,1.241
+168,2025-08-31,Non-marketable,Total Non-marketable,3.185
+169,2025-08-31,Interest-bearing Debt,Total Interest-bearing Debt,3.372
+170,2025-09-30,Marketable,Treasury Bills,4.187
+171,2025-09-30,Marketable,Treasury Notes,3.112
+172,2025-09-30,Marketable,Treasury Bonds,3.327
+173,2025-09-30,Marketable,Treasury Inflation-Protected Securities (TIPS),0.909
+174,2025-09-30,Marketable,Treasury Floating Rate Notes (FRN),4.034
+175,2025-09-30,Marketable,Federal Financing Bank,2.389
+176,2025-09-30,Marketable,Total Marketable,3.406
+177,2025-09-30,Non-marketable,Domestic Series,7.577
+178,2025-09-30,Non-marketable,Special Purpose Vehicle,2.995
+179,2025-09-30,Non-marketable,Foreign Series,0.000
+180,2025-09-30,Non-marketable,State and Local Government Series,3.461
+181,2025-09-30,Non-marketable,United States Savings Securities,3.397
+182,2025-09-30,Non-marketable,United States Savings Inflation Securities,3.822
+183,2025-09-30,Non-marketable,Government Account Series,3.162
+184,2025-09-30,Non-marketable,Government Account Series Inflation Securities,1.241
+185,2025-09-30,Non-marketable,Total Non-marketable,3.173
+186,2025-09-30,Interest-bearing Debt,Total Interest-bearing Debt,3.363

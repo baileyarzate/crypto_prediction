@@ -1,0 +1,13 @@
+get everything working in one line
+
+make it work in one line, and make it easy to train more if needed
+
+send to email
+
+get working on other computer
+
+put onto github & write a good readme with all documentation to get it running
+
+pull and make sure it runs
+
+write a post on linkedin with a cool picture and attach the github link
