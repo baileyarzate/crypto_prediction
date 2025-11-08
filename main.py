@@ -1,5 +1,7 @@
 import sys
 import os
+from datetime import datetime
+import pytz
 import importlib
 import argparse
 from main_scripts import train
@@ -94,9 +96,28 @@ def ingest_paths(
     ir_lookback_days=1095,
 ):
     print("\nStep 1: Ingesting fresh data...")
+
+    # Prepare a runtime-scoped directory under test_data (or provided save_dir)
+    if save_dir is None:
+        base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_data')
+    else:
+        base_dir = save_dir
+    run_id = datetime.now(pytz.timezone("America/Los_Angeles")).strftime("%Y%m%d_%H%M%S")
+    run_dir = os.path.join(base_dir, run_id)
+    quant_dir = os.path.join(run_dir, 'quant')
+    sentiment_dir = os.path.join(run_dir, 'sentiment')
+    interest_dir = os.path.join(run_dir, 'interest')
+    try:
+        os.makedirs(quant_dir, exist_ok=True)
+        os.makedirs(sentiment_dir, exist_ok=True)
+        os.makedirs(interest_dir, exist_ok=True)
+    except Exception as e:
+        print(f"Warning creating run directories: {e}")
+    print(f"Saving this run's data under: {run_dir}")
+
     quant_path = get_quant_data(
         save=True,
-        save_dir=save_dir,
+        save_dir=quant_dir,
         exchange_name=exchange,
         symbol=symbol,
         timeframe=timeframe,
@@ -105,14 +126,14 @@ def ingest_paths(
     google_path = extract_google_sentiment(
         hours=hours,
         save=True,
-        save_dir=save_dir,
+        save_dir=sentiment_dir,
         batch_size=batch_size,
         model_name=model,
         max_results_per_query=max_results_per_query,
     )
     interest_path = get_interest_data(
         save=True,
-        save_dir=save_dir,
+        save_dir=interest_dir,
         start_date=start_date,
         lookback_days=ir_lookback_days,
     )
@@ -239,7 +260,8 @@ if __name__ == '__main__':
                                   batch_size = 32,
                                   model = "kk08/CryptoBERT",
                                   ir_lookback_days= 1095,
-                                  save = save_models)
+                                  save = save_models,
+                                  max_results_per_query = 5)
 
         if run_inference:
             try:
