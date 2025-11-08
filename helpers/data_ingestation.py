@@ -266,7 +266,7 @@ def extract_google_sentiment(
 
     total_days = max(hours // 24, 1)
     cap = max_results_per_query or 5
-    rows: List[List[Any]] = []
+    rows = []
     api_call_count = 0
     now = datetime.utcnow()
 
@@ -282,7 +282,9 @@ def extract_google_sentiment(
 
             try:
                 articles = client.search(query, after=after_date, before=before_date, max_results=cap)
+                time.sleep(1)  # add a 1-second pause after each API call
                 api_call_count += 1
+                
             except Exception as e:
                 print(f"⚠️ Warning: search failed for '{query}' ({after_date}): {e}")
                 articles = []
