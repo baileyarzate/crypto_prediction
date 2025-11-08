@@ -6,7 +6,7 @@ import pytz
 from tqdm import tqdm
 import requests
 import os
-from typing import Optional, Tuple, Iterable, List
+from typing import Optional, Tuple, Iterable
 from google_news_api import GoogleNewsClient
 from bs4 import BeautifulSoup
 from transformers import BertTokenizer, BertForSequenceClassification, pipeline
@@ -236,7 +236,7 @@ def extract_google_sentiment(
             title_results.extend(sentiment_pipeline(batch_title))  # type: ignore
             summary_results.extend(sentiment_pipeline(batch_summary))  # type: ignore
 
-        def signed_score(result: Dict[str, Any]) -> float:
+        def signed_score(result) -> float:
             label, score = result.get("label", ""), result.get("score", 0)
             if label == "LABEL_0":
                 return -score
@@ -282,7 +282,7 @@ def extract_google_sentiment(
 
             try:
                 articles = client.search(query, after=after_date, before=before_date, max_results=cap)
-                time.sleep(1)  # add a 1-second pause after each API call
+                time.sleep(1.02)  # add a 1-second pause after each API call
                 api_call_count += 1
                 
             except Exception as e:
@@ -303,12 +303,13 @@ def extract_google_sentiment(
 
     tqdm.pandas(desc="Applying sentiment analysis")
     df_sentiment = _apply_sentiment_batch(df, batch_size)
+        
 
     # --- Save / Return ---
     if not save and not return_df:
         raise ValueError("Nothing to return: set save=True or return_df=True")
 
-    out_path: Optional[str] = None
+    out_path = None
     if save:
         out_dir = save_dir or SAVE_DIR
         _ensure_dir(out_dir)
