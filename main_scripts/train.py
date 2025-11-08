@@ -65,6 +65,16 @@ def preprocess_data(quant_path, google_path, interest_path):
     # Now, merge this aligned sentiment data
     df_final = pd.merge(df_merged, df_google_agg, on='merge_date', how='left')
 
+    # Ensure sentiment column exists and handle API-limit gaps
+    if 'weighted_sentiment' not in df_final.columns:
+        df_final['weighted_sentiment'] = 0.0
+        df_final['sentiment_missing'] = 1
+    else:
+        # Flag where sentiment was originally missing, then fill with zeros
+        missing_mask = df_final['weighted_sentiment'].isna()
+        df_final['sentiment_missing'] = missing_mask.astype(int)
+        df_final['weighted_sentiment'] = df_final['weighted_sentiment'].fillna(0.0)
+
     # --- 5. Final Filtering and Cleaning ---
     # Before dropping, sort and ffill 
     df_final = df_final.sort_values(by='merge_date').reset_index(drop=True)
@@ -72,7 +82,7 @@ def preprocess_data(quant_path, google_path, interest_path):
     # Forward-fill NaNs that might exist from the merge 
     df_final.ffill(inplace=True)
     
-    # Now, drop any remaining NaNs
+    # Now, drop any remaining NaNs (sentiment handled earlier)
     df_final.dropna(inplace=True)
     
     # Clean up helper columns

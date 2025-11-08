@@ -37,7 +37,7 @@ def get_quant_data(
     exchange_name: str = 'coinbase',
     symbol: str = 'BTC/USD',
     timeframe: str = '1d',
-    lookback_days: int = 365,
+    lookback_days: int = 1095,
     return_df: bool = False,
     show_progress: bool = True,
 ):
@@ -108,7 +108,7 @@ def get_interest_data(
     save: bool = True,
     save_dir: Optional[str] = None,
     start_date: Optional[str] = None,
-    lookback_days: int = 365,
+    lookback_days: int = 1095,
     base_url: str = 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service',
     endpoint: str = '/v2/accounting/od/avg_interest_rates',
     params_override: Optional[dict] = None,
@@ -177,7 +177,7 @@ def get_interest_data(
     return out_path
 
 def extract_google_sentiment(
-    hours: int = 400,
+    hours: int = 26280,
     save: bool = True,
     save_dir: Optional[str] = None,
     queries: Optional[Iterable[Tuple[str, int]]] = None,
@@ -187,13 +187,20 @@ def extract_google_sentiment(
     max_results_per_query: Optional[int] = None,
     return_df: bool = False,
 ):
-    tokenizer = BertTokenizer.from_pretrained(model_name)
-    model = BertForSequenceClassification.from_pretrained(model_name)
-
-    sentiment_pipeline = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
+    try:
+        tokenizer = BertTokenizer.from_pretrained(model_name)
+        model = BertForSequenceClassification.from_pretrained(model_name)
+        sentiment_pipeline = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
+    except Exception as e:
+        print(f"Warning: sentiment model load failed: {e}. Proceeding without model; downstream will set zeros.")
+        sentiment_pipeline = None  # type: ignore
 
     # Initialize the client
-    client = GoogleNewsClient(language="en", country="US")
+    try:
+        client = GoogleNewsClient(language="en", country="US")
+    except Exception as e:
+        print(f"Warning: GoogleNews client failed: {e}. Returning empty sentiment; downstream will set zeros.")
+        client = None  # type: ignore
 
     def clean_html(raw_html):
         return BeautifulSoup(raw_html, "html.parser").get_text(strip=True)
@@ -204,13 +211,20 @@ def extract_google_sentiment(
         return start_time.strftime("%Y-%m-%dT%H:%M:%SZ"), now.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     def fetch_articles(query: str, hours_ago: int, max_results: int = 20):
+        if client is None:
+            return pd.DataFrame(columns=["query", 'time_period', "title", "summary", "published"])  # type: ignore
         after, before = get_dynamic_dates(hours_ago)
-        articles = client.search(
-            query,
-            after=after[:10],  # API accepts YYYY-MM-DD
-            before=before[:10],
-            max_results=max_results
-        )
+        try:
+            articles = client.search(
+                query,
+                after=after[:10],  # API accepts YYYY-MM-DD
+                before=before[:10],
+                max_results=max_results
+            )
+        except Exception as e:
+            # API limit or other error; return empty for this query
+            print(f"Warning: news search failed for '{query}': {e}. Skipping.")
+            articles = []
         # Clean and structure the results
         data = []
         for a in articles:
@@ -222,6 +236,16 @@ def extract_google_sentiment(
         return pd.DataFrame(data, columns=["query", 'time_period', "title", "summary", "published"])
 
     def _apply_sentiment_batch(df, batch_size=32):
+        if df.empty:
+            # Ensure expected columns exist even if empty
+            df['post'] = pd.Series(dtype=str)
+            df['weighted_sentiment'] = pd.Series(dtype=float)
+            return df
+        if sentiment_pipeline is None:
+            # No model available; set zeros
+            df['post'] = df['title'] + ' ' + df['summary']
+            df['weighted_sentiment'] = 0.0
+            return df.drop(columns=['title', 'summary'], errors='ignore')
         # Combine title and summary for batching if you want weighted later
         texts_title = df['title'].tolist()
         texts_summary = df['summary'].tolist()
@@ -261,10 +285,14 @@ def extract_google_sentiment(
 
     # Build queries list
     if queries is None:
-        scale = max(1, int(hours/12))
-        queries = crypto_queries_with_limits(scale=scale)
+        # Avoid exploding request volume; use modest scale and cap per-query results
+        bounded_scale = 1
+        queries = crypto_queries_with_limits(scale=bounded_scale)
     if max_results_per_query is not None:
         queries = [(q, min(limit, max_results_per_query)) for q, limit in queries]
+    else:
+        # Provide a safe default cap to reduce API pressure when hours is very large
+        queries = [(q, min(limit, 20)) for q, limit in queries]
 
     dfs = []
     for q, max_articles in tqdm(queries, desc='extracting articles from queries...'):
@@ -312,20 +340,21 @@ if __name__ == "__main__":
     p_quant.add_argument("--exchange", default="coinbase")
     p_quant.add_argument("--symbol", default="BTC/USD")
     p_quant.add_argument("--timeframe", default="1d")
-    p_quant.add_argument("--lookback-days", type=int, default=365)
+    p_quant.add_argument("--lookback-days", type=int, default=1095)
     p_quant.add_argument("--save-dir", default=None)
 
     # Interest
     p_ir = sub.add_parser("interest", help="Fetch US Treasury interest rates")
     p_ir.add_argument("--start-date", default=None, help="YYYY-MM-DD; default uses lookback")
-    p_ir.add_argument("--lookback-days", type=int, default=365)
+    p_ir.add_argument("--lookback-days", type=int, default=1095)
     p_ir.add_argument("--save-dir", default=None)
 
     # Google sentiment
     p_news = sub.add_parser("news", help="Fetch Google News sentiment for crypto")
-    p_news.add_argument("--hours", type=int, default=400)
+    p_news.add_argument("--hours", type=int, default=26280)
     p_news.add_argument("--batch-size", type=int, default=32)
     p_news.add_argument("--model", default="kk08/CryptoBERT")
+    p_news.add_argument("--max-results-per-query", type=int, default=None)
     p_news.add_argument("--save-dir", default=None)
 
     args = parser.parse_args()
@@ -354,5 +383,6 @@ if __name__ == "__main__":
             save_dir=args.save_dir,
             batch_size=args.batch_size,
             model_name=args.model,
+            max_results_per_query=args.max_results_per_query,
         )
         print(path)

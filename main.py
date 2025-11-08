@@ -15,7 +15,47 @@ from helpers.data_ingestation import (
 )
 
 
-def run_training_pipeline(quant_path, google_path, interest_path, save=True):
+def run_training_pipeline(
+    quant_path: str | None = None,
+    google_path: str | None = None,
+    interest_path: str | None = None,
+    save: bool = True,
+    # If ingest=True or any path is None, we'll call ingest_paths with options below
+    ingest: bool = False,
+    # Ingestion options (mirrors ingest_paths args)
+    save_dir: str | None = None,
+    exchange: str = "coinbase",
+    symbol: str = "BTC/USD",
+    timeframe: str = "1d",
+    lookback_days: int = 1095,
+    hours: int = 26280,
+    batch_size: int = 32,
+    model: str = "kk08/CryptoBERT",
+    max_results_per_query: int | None = None,
+    start_date: str | None = None,
+    ir_lookback_days: int = 1095,
+):
+    """
+    Train models using either curated file paths or freshly ingested data.
+
+    - If all three paths are provided and ingest is False, uses curated data.
+    - Otherwise (ingest=True or any path is None), ingests new data first.
+    """
+    if ingest or not (quant_path and google_path and interest_path):
+        quant_path, google_path, interest_path = ingest_paths(
+            save_dir=save_dir,
+            exchange=exchange,
+            symbol=symbol,
+            timeframe=timeframe,
+            lookback_days=lookback_days,
+            hours=hours,
+            batch_size=batch_size,
+            model=model,
+            max_results_per_query=max_results_per_query,
+            start_date=start_date,
+            ir_lookback_days=ir_lookback_days,
+        )
+
     df_preprocessed = preprocess_data(quant_path, google_path, interest_path)
     df_featured = feature_engineering(df_preprocessed)
     train_and_evaluate(df_featured, save_artifacts=save)
@@ -43,14 +83,15 @@ def ingest_paths(
     exchange="coinbase",
     symbol="BTC/USD",
     timeframe="1d",
-    lookback_days=365,
+    lookback_days=1095,
     # news
-    hours=400,
+    hours=26280,
     batch_size=32,
     model="kk08/CryptoBERT",
+    max_results_per_query=None,
     # interest
     start_date=None,
-    ir_lookback_days=365,
+    ir_lookback_days=1095,
 ):
     print("\nStep 1: Ingesting fresh data...")
     quant_path = get_quant_data(
@@ -67,6 +108,7 @@ def ingest_paths(
         save_dir=save_dir,
         batch_size=batch_size,
         model_name=model,
+        max_results_per_query=max_results_per_query,
     )
     interest_path = get_interest_data(
         save=True,
@@ -88,14 +130,15 @@ def build_parser():
         p.add_argument("--exchange", default="coinbase")
         p.add_argument("--symbol", default="BTC/USD")
         p.add_argument("--timeframe", default="1d")
-        p.add_argument("--lookback-days", type=int, default=365)
+        p.add_argument("--lookback-days", type=int, default=1095)
         # news
-        p.add_argument("--hours", type=int, default=400)
+        p.add_argument("--hours", type=int, default=26280)
         p.add_argument("--batch-size", type=int, default=32)
         p.add_argument("--model", default="kk08/CryptoBERT")
+        p.add_argument("--max-results-per-query", type=int, default=None)
         # interest
         p.add_argument("--start-date", default=None)
-        p.add_argument("--ir-lookback-days", type=int, default=365)
+        p.add_argument("--ir-lookback-days", type=int, default=1095)
 
     # train
     p_train = sub.add_parser("train", help="Train models")
@@ -136,6 +179,7 @@ if __name__ == '__main__':
                 hours=args.hours,
                 batch_size=args.batch_size,
                 model=args.model,
+                max_results_per_query=args.max_results_per_query,
                 start_date=args.start_date,
                 ir_lookback_days=args.ir_lookback_days,
             )
@@ -156,6 +200,7 @@ if __name__ == '__main__':
                 hours=args.hours,
                 batch_size=args.batch_size,
                 model=args.model,
+                max_results_per_query=args.max_results_per_query,
                 start_date=args.start_date,
                 ir_lookback_days=args.ir_lookback_days,
             )
@@ -175,22 +220,26 @@ if __name__ == '__main__':
             hours=args.hours,
             batch_size=args.batch_size,
             model=args.model,
+            max_results_per_query=args.max_results_per_query,
             start_date=args.start_date,
             ir_lookback_days=args.ir_lookback_days,
         )
         run_prediction_pipeline(q, g, i, args.models_dir)
     else:
         # Fallback to previous behavior if no subcommand provided
-        train_models = False
-        save_models = False
-        run_inference = True
+        train_models = True
+        save_models = True
+        run_inference = False
         forecast = False
 
         if train_models:
-            QUANT_PATH = r''
-            GOOGLE_PATH = r''
-            INTEREST_PATH = r''
-            run_training_pipeline(QUANT_PATH, GOOGLE_PATH, INTEREST_PATH, save=save_models)
+            run_training_pipeline(ingest=True,
+                                  lookback_days = 1095,
+                                  hours = 26280,
+                                  batch_size = 32,
+                                  model = "kk08/CryptoBERT",
+                                  ir_lookback_days= 1095,
+                                  save = save_models)
 
         if run_inference:
             try:
