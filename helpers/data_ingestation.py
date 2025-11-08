@@ -276,9 +276,9 @@ def extract_google_sentiment(
         after_date, before_date = start_time.strftime("%Y-%m-%d"), end_time.strftime("%Y-%m-%d")
 
         for query in queries_list:
-            if api_call_count > 0 and api_call_count % 900 == 0:
-                print(f"Rate limit hit at {api_call_count} calls. Sleeping 60s...")
-                time.sleep(60)
+            # if api_call_count > 0 and api_call_count % 900 == 0:
+            #     print(f"Rate limit hit at {api_call_count} calls. Sleeping 60s...")
+            #     time.sleep(60)
 
             try:
                 articles = client.search(query, after=after_date, before=before_date, max_results=cap)

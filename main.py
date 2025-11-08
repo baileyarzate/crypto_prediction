@@ -16,6 +16,10 @@ from helpers.data_ingestation import (
     extract_google_sentiment,
 )
 
+import ctypes
+# Prevent system sleep while script is running
+ctypes.windll.kernel32.SetThreadExecutionState(0x80000002)
+
 
 def run_training_pipeline(
     quant_path: str | None = None,
