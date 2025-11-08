@@ -6,29 +6,66 @@ import pytz
 from tqdm import tqdm
 import requests
 import os
+from typing import Optional, Tuple, Iterable, List
 from google_news_api import GoogleNewsClient
 from bs4 import BeautifulSoup
 from transformers import BertTokenizer, BertForSequenceClassification, pipeline
 from helpers.queries import crypto_queries_with_limits
 
+"""
+Flexible data ingestion utilities for:
+- Quant price data (via ccxt)
+- US Treasury interest rates
+- Google News + CryptoBERT sentiment
+
+Backwards compatible defaults: functions still return a file path string by
+default (save=True, return_df=False). To get DataFrames in-memory, pass
+return_df=True. If you set save=False, you must set return_df=True.
+"""
+
 # --- Paths for saving data ---
 # Use relative paths from the project root for portability
-SAVE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'test_data')
+DEFAULT_SAVE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'test_data')
+SAVE_DIR = os.environ.get('SAVE_DIR', DEFAULT_SAVE_DIR)
 
-def get_quant_data(save = True):
+def _ensure_dir(path: str) -> None:
+    os.makedirs(path, exist_ok=True)
+
+def get_quant_data(
+    save: bool = True,
+    save_dir: Optional[str] = None,
+    exchange_name: str = 'coinbase',
+    symbol: str = 'BTC/USD',
+    timeframe: str = '1d',
+    lookback_days: int = 365,
+    return_df: bool = False,
+    show_progress: bool = True,
+):
+    """
+    Fetch OHLCV data via ccxt with configurable exchange/symbol/timeframe.
+
+    Returns (by flags):
+    - save=True,  return_df=False -> file path (str)
+    - save=False, return_df=True  -> DataFrame
+    - save=True,  return_df=True  -> (DataFrame, file path)
+    - save=False, return_df=False -> ValueError
+    """
     print("--- Fetching Quant Data ---")
-    exchange = ccxt.coinbase()
-    symbol = 'BTC/USD'
-    timeframe='1d'
-    pst = pytz.timezone('America/Los_Angeles')
+
+    # Resolve exchange dynamically
+    try:
+        exchange_cls = getattr(ccxt, exchange_name)
+        exchange = exchange_cls()
+    except AttributeError:
+        raise ValueError(f"Unknown exchange '{exchange_name}' for ccxt")
 
     now_ms = int(datetime.utcnow().timestamp() * 1000)
-    since_ms = now_ms - 365 * 24 * 60 * 60 * 1000  # 1 year ago in ms
+    since_ms = now_ms - lookback_days * 24 * 60 * 60 * 1000
 
     all_data = []
 
-    # Loop until now
-    pbar = tqdm(total=now_ms - since_ms, unit='ms', desc="Fetching daily OHLCV")
+    total_span = max(1, now_ms - since_ms)
+    pbar = tqdm(total=total_span, unit='ms', desc="Fetching OHLCV", disable=not show_progress)
     while since_ms < now_ms:
         try:
             ohlcv = exchange.fetch_ohlcv(symbol, timeframe=timeframe, since=since_ms, limit=1000)
@@ -37,55 +74,78 @@ def get_quant_data(save = True):
             all_data += ohlcv
             # Advance to the next batch
             since_ms = ohlcv[-1][0] + exchange.parse_timeframe(timeframe) * 1000
-            pbar.update(ohlcv[-1][0] - ohlcv[0][0])
+            pbar.update(max(0, ohlcv[-1][0] - ohlcv[0][0]))
             time.sleep(exchange.rateLimit / 1000)
         except Exception as e:
             print("Error:", e)
             time.sleep(5)
     pbar.close()
-    df = pd.DataFrame(all_data, columns=['timestamp','open','high','low','close','volume'])
-    df['datetime_utc'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
-    
-    if save:
-        timestamp_str = datetime.now(pytz.timezone("America/Los_Angeles")).strftime("%Y%m%d_%H%M")
-        filename = os.path.join(SAVE_DIR, f'quant_bitcoin_test_{timestamp_str}.csv')
-        df.to_csv(filename, index=False)
-        print(f"Quant data saved to: {filename}")
-    return filename
 
-def get_interest_data(save = True):
-    # Your interest rate function, modified to save and return the filename
+    df = pd.DataFrame(all_data, columns=['timestamp','open','high','low','close','volume'])
+    if not df.empty:
+        df['datetime_utc'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
+
+    if not save and not return_df:
+        raise ValueError("Nothing to return: set save=True or return_df=True")
+
+    out_path: Optional[str] = None
+    if save:
+        out_dir = save_dir or SAVE_DIR
+        _ensure_dir(out_dir)
+        timestamp_str = datetime.now(pytz.timezone("America/Los_Angeles")).strftime("%Y%m%d_%H%M")
+        out_path = os.path.join(out_dir, f'quant_bitcoin_test_{timestamp_str}.csv')
+        df.to_csv(out_path, index=False)
+        print(f"Quant data saved to: {out_path}")
+
+    if return_df and save:
+        return df, out_path
+    if return_df and not save:
+        return df
+    # save only
+    return out_path
+
+def get_interest_data(
+    save: bool = True,
+    save_dir: Optional[str] = None,
+    start_date: Optional[str] = None,
+    lookback_days: int = 365,
+    base_url: str = 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service',
+    endpoint: str = '/v2/accounting/od/avg_interest_rates',
+    params_override: Optional[dict] = None,
+    timeout: int = 30,
+    return_df: bool = False,
+):
     print("--- Fetching Interest Rate Data ---")
-    # Calculate the date one year ago for the filter (e.g., '2024-10-30')
-    one_year_ago = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+    # Determine start_date window
+    if start_date is None:
+        start_date = (datetime.now() - timedelta(days=lookback_days)).strftime('%Y-%m-%d')
 
     # --- API Variables for Interest Rates (Using v2 from documentation) ---
-    baseUrl = 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service'
-    # *** CORRECTED ENDPOINT based on the documentation provided ***
-    endpoint = '/v2/accounting/od/avg_interest_rates' 
-    API_URL = f'{baseUrl}{endpoint}'
+    api_url = f'{base_url}{endpoint}'
 
     # Define parameters in a dictionary for proper URL encoding
     params = {
         'fields': 'record_date,security_type_desc,security_desc,avg_interest_rate_amt',
-        'filter': f'record_date:gte:{one_year_ago}', # Filter for the last year
+        'filter': f'record_date:gte:{start_date}',
         'sort': 'record_date', 
         'format': 'json',
-        'page[size]': 500  # Passed as a dictionary, requests handles the encoding
+        'page[size]': 500
     }
+    if params_override:
+        params.update(params_override)
 
-    print(f"Attempting to call API at base URL: {API_URL}")
+    print(f"Attempting to call API at base URL: {api_url}")
 
     # Call API and load into a pandas dataframe
     try:
-        response = requests.get(API_URL, params=params)
+        response = requests.get(api_url, params=params)
         response.raise_for_status()
-        data = response.json()
+        payload = response.json()
         
         # Check if 'data' key exists and is not empty
-        if 'data' in data and data['data']:
+        if 'data' in payload and payload['data']:
             # This line should be inside the 'if'
-            df = pd.DataFrame(data['data']) 
+            df = pd.DataFrame(payload['data']) 
             print("\n🎉 API Call Successful!")
         else:
             print("No data found for the specified filter.")
@@ -97,17 +157,38 @@ def get_interest_data(save = True):
     # This second definition is redundant and can be removed
     # df = pd.DataFrame(data['data']) 
     
-    # Save whatever df was created (even if it's empty)
-    if save:
-        timestamp_str = datetime.now(pytz.timezone("America/Los_Angeles")).strftime("%Y%m%d_%H%M")
-        filename = os.path.join(SAVE_DIR, f'interest_rates_test_{timestamp_str}.csv')
-        df.to_csv(filename, index=False)
-        print(f"Interest rate data saved to: {filename}")
-    return filename
+    # Enforce explicit return choice and save if requested
+    if not save and not return_df:
+        raise ValueError("Nothing to return: set save=True or return_df=True")
 
-def extract_google_sentiment(hours = 400, save = True):
-    tokenizer = BertTokenizer.from_pretrained("kk08/CryptoBERT")
-    model = BertForSequenceClassification.from_pretrained("kk08/CryptoBERT")
+    out_path: Optional[str] = None
+    if save:
+        out_dir = save_dir or SAVE_DIR
+        _ensure_dir(out_dir)
+        timestamp_str = datetime.now(pytz.timezone("America/Los_Angeles")).strftime("%Y%m%d_%H%M")
+        out_path = os.path.join(out_dir, f'interest_rates_test_{timestamp_str}.csv')
+        df.to_csv(out_path, index=False)
+        print(f"Interest rate data saved to: {out_path}")
+
+    if return_df and save:
+        return df, out_path
+    if return_df and not save:
+        return df
+    return out_path
+
+def extract_google_sentiment(
+    hours: int = 400,
+    save: bool = True,
+    save_dir: Optional[str] = None,
+    queries: Optional[Iterable[Tuple[str, int]]] = None,
+    batch_size: int = 32,
+    model_name: str = "kk08/CryptoBERT",
+    tokenizer_name: Optional[str] = None,
+    max_results_per_query: Optional[int] = None,
+    return_df: bool = False,
+):
+    tokenizer = BertTokenizer.from_pretrained(model_name)
+    model = BertForSequenceClassification.from_pretrained(model_name)
 
     sentiment_pipeline = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
 
@@ -164,7 +245,7 @@ def extract_google_sentiment(hours = 400, save = True):
             score = result['score']
             if label == "LABEL_0":
                 return -score
-            elif label == "LABEL_0":
+            elif label == "LABEL_1":
                 return score
             else:
                 return 0
@@ -178,19 +259,100 @@ def extract_google_sentiment(hours = 400, save = True):
 
         return df
 
+    # Build queries list
+    if queries is None:
+        scale = max(1, int(hours/12))
+        queries = crypto_queries_with_limits(scale=scale)
+    if max_results_per_query is not None:
+        queries = [(q, min(limit, max_results_per_query)) for q, limit in queries]
+
     dfs = []
-    for q, max_articles in tqdm(crypto_queries_with_limits(scale=int(hours/12)), desc='extracting articles from queries...'):
+    for q, max_articles in tqdm(queries, desc='extracting articles from queries...'):
+        if max_articles <= 0:
+            continue
         dfs.append(fetch_articles(q, hours, max_results=max_articles))
-    df = pd.concat(dfs, ignore_index=True)
-    df = df.drop_duplicates(subset=['title', 'summary'])
+    if dfs:
+        df = pd.concat(dfs, ignore_index=True)
+        df = df.drop_duplicates(subset=['title', 'summary'])
+    else:
+        df = pd.DataFrame(columns=["query", 'time_period', "title", "summary", "published"])  # type: ignore
 
     # Apply sentiment with tqdm
     tqdm.pandas(desc="Applying sentiment analysis")
     df = _apply_sentiment_batch(df)
 
+    if not save and not return_df:
+        raise ValueError("Nothing to return: set save=True or return_df=True")
+
+    out_path: Optional[str] = None
     if save:
+        out_dir = save_dir or SAVE_DIR
+        _ensure_dir(out_dir)
         timestamp_str = datetime.now(pytz.timezone("America/Los_Angeles")).strftime("%Y%m%d_%H%M")
-        filename = os.path.join(SAVE_DIR, f'google_news_sentiment_test_{timestamp_str}_hours_{hours}.csv')
-        df.to_csv(filename, index=False)
-        print(f"Google sentiment data saved to: {filename}")
-    return filename
+        out_path = os.path.join(out_dir, f'google_news_sentiment_test_{timestamp_str}_hours_{hours}.csv')
+        df.to_csv(out_path, index=False)
+        print(f"Google sentiment data saved to: {out_path}")
+
+    if return_df and save:
+        return df, out_path
+    if return_df and not save:
+        return df
+    return out_path
+
+
+if __name__ == "__main__":
+    # Minimal CLI for ad-hoc ingestion
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Data ingestion utilities")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    # Quant
+    p_quant = sub.add_parser("quant", help="Fetch OHLCV via ccxt")
+    p_quant.add_argument("--exchange", default="coinbase")
+    p_quant.add_argument("--symbol", default="BTC/USD")
+    p_quant.add_argument("--timeframe", default="1d")
+    p_quant.add_argument("--lookback-days", type=int, default=365)
+    p_quant.add_argument("--save-dir", default=None)
+
+    # Interest
+    p_ir = sub.add_parser("interest", help="Fetch US Treasury interest rates")
+    p_ir.add_argument("--start-date", default=None, help="YYYY-MM-DD; default uses lookback")
+    p_ir.add_argument("--lookback-days", type=int, default=365)
+    p_ir.add_argument("--save-dir", default=None)
+
+    # Google sentiment
+    p_news = sub.add_parser("news", help="Fetch Google News sentiment for crypto")
+    p_news.add_argument("--hours", type=int, default=400)
+    p_news.add_argument("--batch-size", type=int, default=32)
+    p_news.add_argument("--model", default="kk08/CryptoBERT")
+    p_news.add_argument("--save-dir", default=None)
+
+    args = parser.parse_args()
+    if args.cmd == "quant":
+        path = get_quant_data(
+            save=True,
+            save_dir=args.save_dir,
+            exchange_name=args.exchange,
+            symbol=args.symbol,
+            timeframe=args.timeframe,
+            lookback_days=args.lookback_days,
+        )
+        print(path)
+    elif args.cmd == "interest":
+        path = get_interest_data(
+            save=True,
+            save_dir=args.save_dir,
+            start_date=args.start_date,
+            lookback_days=args.lookback_days,
+        )
+        print(path)
+    elif args.cmd == "news":
+        path = extract_google_sentiment(
+            hours=args.hours,
+            save=True,
+            save_dir=args.save_dir,
+            batch_size=args.batch_size,
+            model_name=args.model,
+        )
+        print(path)
