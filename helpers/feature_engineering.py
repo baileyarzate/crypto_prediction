@@ -11,6 +11,8 @@ def feature_engineering(df):
     Takes a preprocessed DataFrame and creates all necessary time-series features.
     """
     print("--- Performing Feature Engineering ---")
+    if len(df) < 15:
+        print('Dataframe size is less than 15, get more data.')
     df_feat = df.copy()
     df_feat['rsi_14'] = calculate_rsi(df_feat, window=14)
     df_feat['lag_1'] = df_feat['close'].shift(1)

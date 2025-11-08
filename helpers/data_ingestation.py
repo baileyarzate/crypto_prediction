@@ -59,7 +59,7 @@ def get_quant_data(
     except AttributeError:
         raise ValueError(f"Unknown exchange '{exchange_name}' for ccxt")
 
-    now_ms = int(datetime.utcnow().timestamp() * 1000)
+    now_ms = exchange.milliseconds()#int(datetime.utcnow().timestamp() * 1000)
     since_ms = now_ms - lookback_days * 24 * 60 * 60 * 1000
 
     all_data = []
@@ -78,7 +78,6 @@ def get_quant_data(
             time.sleep(exchange.rateLimit / 1000)
         except Exception as e:
             print("Error:", e)
-            time.sleep(5)
     pbar.close()
 
     df = pd.DataFrame(all_data, columns=['timestamp','open','high','low','close','volume'])
@@ -104,68 +103,126 @@ def get_quant_data(
     # save only
     return out_path
 
+def _fetch_data_window(
+    start_date: str, 
+    end_date: str, 
+    base_url: str, 
+    endpoint: str, 
+    params_override: Optional[dict] = None, 
+    timeout: int = 30
+) -> pd.DataFrame:
+    """Fetches data for a single date window."""
+    api_url = f'{base_url}{endpoint}'
+    initial_columns = ['record_date','security_type_desc','security_desc','avg_interest_rate_amt']
+    
+    params = {
+        'fields': ','.join(initial_columns),
+        # Filter for the specific window: start_date <= record_date < end_date
+        'filter': f'record_date:gte:{start_date},record_date:lt:{end_date}',
+        'sort': 'record_date', 
+        'format': 'json',
+        'page[size]': 10000 # Use max size to ensure full year coverage in one page
+    }
+    if params_override:
+        params.update(params_override)
+
+    print(f"  -> Fetching: {start_date} to {end_date}")
+
+    all_data = []
+    has_more_pages = True
+    page_num = 1
+    
+    # Simple pagination check in case a single year exceeds 10000 records
+    while has_more_pages:
+        params['page[number]'] = page_num
+        
+        try:
+            response = requests.get(api_url, params=params, timeout=timeout)
+            response.raise_for_status()
+            payload = response.json()
+            
+            if 'data' in payload and payload['data']:
+                all_data.extend(payload['data'])
+                has_more_pages = 'next' in payload.get('links', {})
+                page_num += 1
+            else:
+                has_more_pages = False
+                
+        except requests.exceptions.RequestException as e:
+            print(f"  -> ERROR fetching page {page_num}: {e}")
+            has_more_pages = False
+    
+    if all_data:
+        return pd.DataFrame(all_data)
+    else:
+        return pd.DataFrame(columns=initial_columns)
+
+# --- Main Wrapper Function ---
 def get_interest_data(
     save: bool = True,
     save_dir: Optional[str] = None,
     start_date: Optional[str] = None,
-    lookback_days: int = 1095,
+    lookback_days: int = 1095, # Example: 1095 days = 3 years
     base_url: str = 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service',
     endpoint: str = '/v2/accounting/od/avg_interest_rates',
     params_override: Optional[dict] = None,
     timeout: int = 30,
     return_df: bool = False,
 ):
-    print("--- Fetching Interest Rate Data ---")
-    # Determine start_date window
-    if start_date is None:
-        start_date = (datetime.now() - timedelta(days=lookback_days)).strftime('%Y-%m-%d')
-
-    # --- API Variables for Interest Rates (Using v2 from documentation) ---
-    api_url = f'{base_url}{endpoint}'
-
-    # Define parameters in a dictionary for proper URL encoding
-    params = {
-        'fields': 'record_date,security_type_desc,security_desc,avg_interest_rate_amt',
-        'filter': f'record_date:gte:{start_date}',
-        'sort': 'record_date', 
-        'format': 'json',
-        'page[size]': 500
-    }
-    if params_override:
-        params.update(params_override)
-
-    print(f"Attempting to call API at base URL: {api_url}")
-
-    # Call API and load into a pandas dataframe
-    try:
-        response = requests.get(api_url, params=params)
-        response.raise_for_status()
-        payload = response.json()
-        
-        # Check if 'data' key exists and is not empty
-        if 'data' in payload and payload['data']:
-            # This line should be inside the 'if'
-            df = pd.DataFrame(payload['data']) 
-            print("\n🎉 API Call Successful!")
-        else:
-            print("No data found for the specified filter.")
-            df = pd.DataFrame() 
-    except requests.exceptions.RequestException as e:
-        print(f"An error occurred: {e}")
-        df = pd.DataFrame()
-
-    # This second definition is redundant and can be removed
-    # df = pd.DataFrame(data['data']) 
     
-    # Enforce explicit return choice and save if requested
-    if not save and not return_df:
-        raise ValueError("Nothing to return: set save=True or return_df=True")
+    print("--- Fetching Interest Rate Data (Year-by-Year) ---")
+    
+    # Determine the end of the data (Today)
+    end_date_dt = datetime.now().date()
+    
+    # Calculate how many full years we need to loop back
+    years_to_fetch = lookback_days // 365
+    
+    all_dfs = []
+    
+    current_end = end_date_dt # Start with today's date
 
+    # Loop backward year by year
+    for i in range(years_to_fetch):
+        # Calculate the start date of this 1-year window
+        current_start = (current_end - timedelta(days=365)).strftime('%Y-%m-%d')
+        
+        # Format the end date for the API (exclusive)
+        api_end_date = current_end.strftime('%Y-%m-%d')
+        
+        # --- Fetch Data for this Window ---
+        df_chunk = _fetch_data_window(
+            start_date=current_start,
+            end_date=api_end_date,
+            base_url=base_url,
+            endpoint=endpoint,
+            params_override=params_override,
+            timeout=timeout
+        )
+        all_dfs.append(df_chunk)
+        
+        # Set the end date for the next iteration to the start date of the current one
+        current_end = datetime.strptime(current_start, '%Y-%m-%d').date()
+
+    # --- Concatenate and Finalize ---
+    if not all_dfs:
+        print("No data fetched in any year.")
+        df = pd.DataFrame()
+    else:
+        # Concatenate all the yearly data chunks
+        df = pd.concat(all_dfs, ignore_index=True)
+        # Drop duplicates in case the API returned overlapping records at the window boundaries
+        df.drop_duplicates(subset=['record_date', 'security_desc'], inplace=True)
+        df.sort_values('record_date', inplace=True)
+        print(f"\n🎉 Total Unique Records Fetched: {len(df)}")
+        
+    # --- Data Saving and Return Logic ---
     out_path: Optional[str] = None
-    if save:
-        out_dir = save_dir or SAVE_DIR
-        _ensure_dir(out_dir)
-        timestamp_str = datetime.now(pytz.timezone("America/Los_Angeles")).strftime("%Y%m%d_%H%M")
+    if save and not df.empty:
+        # NOTE: Using placeholder logic for saving
+        out_dir = save_dir or "data" 
+        # _ensure_dir(out_dir) 
+        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M") 
         out_path = os.path.join(out_dir, f'interest_rates_test_{timestamp_str}.csv')
         df.to_csv(out_path, index=False)
         print(f"Interest rate data saved to: {out_path}")
@@ -249,7 +306,7 @@ def extract_google_sentiment(
         df["weighted_sentiment"] = (
             0.7 * df["title_sentiment"] + 0.3 * df["summary_sentiment"]
         )
-        return df[["post", "weighted_sentiment"]]
+        return df[['query','time_period','published','post','weighted_sentiment']]
 
     # --- Fetch Logic ---
     if client is None:
@@ -282,7 +339,7 @@ def extract_google_sentiment(
 
             try:
                 articles = client.search(query, after=after_date, before=before_date, max_results=cap)
-                time.sleep(1.02)  # add a 1-second pause after each API call
+                #time.sleep(1.05)  # add a 1-second pause after each API call
                 api_call_count += 1
                 
             except Exception as e:
@@ -303,7 +360,6 @@ def extract_google_sentiment(
 
     tqdm.pandas(desc="Applying sentiment analysis")
     df_sentiment = _apply_sentiment_batch(df, batch_size)
-        
 
     # --- Save / Return ---
     if not save and not return_df:

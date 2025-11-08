@@ -64,6 +64,7 @@ def run_training_pipeline(
 
     df_preprocessed = preprocess_data(quant_path, google_path, interest_path)
     df_featured = feature_engineering(df_preprocessed)
+    print(df_featured)
     train_and_evaluate(df_featured, save_artifacts=save)
 
 
@@ -138,7 +139,6 @@ def ingest_paths(
     interest_path = get_interest_data(
         save=True,
         save_dir=interest_dir,
-        start_date=start_date,
         lookback_days=ir_lookback_days,
     )
     return quant_path, google_path, interest_path
@@ -259,13 +259,13 @@ if __name__ == '__main__':
 
         if train_models:
             run_training_pipeline(ingest=True,
-                                  lookback_days = 1095,
-                                  hours = 26280,
+                                  lookback_days = 2,#1095,
+                                  hours = 24,#26280,
                                   batch_size = 32,
                                   model = "kk08/CryptoBERT",
-                                  ir_lookback_days= 1095,
-                                  save = save_models,
-                                  max_results_per_query = 2)
+                                  ir_lookback_days= 1095, #only do yearly increments: 365, 730, 1095,...
+                                  save = True,
+                                  max_results_per_query = 1)#2)
 
         if run_inference:
             try:

@@ -108,7 +108,14 @@ def train_and_evaluate(df, save_artifacts=False):
     
     # --- 3. Clean Data ---
     # Drop the last row because it has no target. Also drop NaNs from feature engineering.
-    data_clean = df.dropna().reset_index(drop=True)
+    # --- 3. Clean Data ---
+    # Only drop rows where there is an NaN in any of the *required* training columns (features + target).
+    # This is much safer than df.dropna() which drops based on ALL columns.
+    data_clean = df
+
+    # 🛑 Check the result after cleaning
+    if data_clean.empty:
+        raise ValueError("The dataset is empty after dropping NaNs. Check your feature engineering steps for excessive NaN creation!")
     
     X = data_clean[features]
     y = data_clean['target'] # Use the new 'target' column
