@@ -156,7 +156,7 @@ def build_parser():
         p.add_argument("--hours", type=int, default=26280)
         p.add_argument("--batch-size", type=int, default=32)
         p.add_argument("--model", default="kk08/CryptoBERT")
-        p.add_argument("--max-results-per-query", type=int, default=None)
+        p.add_argument("--max-results-per-query", type=int, default=1)
         # interest
         p.add_argument("--start-date", default=None)
         p.add_argument("--ir-lookback-days", type=int, default=1095)
@@ -261,7 +261,7 @@ if __name__ == '__main__':
                                   model = "kk08/CryptoBERT",
                                   ir_lookback_days= 1095,
                                   save = save_models,
-                                  max_results_per_query = 5)
+                                  max_results_per_query = 2)
 
         if run_inference:
             try:
