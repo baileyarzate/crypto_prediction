@@ -149,7 +149,7 @@ def _fetch_data_window(
                 has_more_pages = False
                 
         except requests.exceptions.RequestException as e:
-            print(f"  -> ERROR fetching page {page_num}: {e}")
+            #print(f"  -> ERROR fetching page {page_num}: {e}")
             has_more_pages = False
     
     if all_data:
@@ -339,7 +339,8 @@ def extract_google_sentiment(
 
             try:
                 articles = client.search(query, after=after_date, before=before_date, max_results=cap)
-                #time.sleep(1.05)  # add a 1-second pause after each API call
+                if hours * max_results_per_query > 20:
+                    time.sleep(1.05)  # add a 1.05-second pause after each API call
                 api_call_count += 1
                 
             except Exception as e:

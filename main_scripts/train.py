@@ -105,15 +105,15 @@ def train_and_evaluate(df, save_artifacts=False):
     # The 'close' column is now a feature, not the target.
     # We must exclude the new 'target' column from the features.
     features = [col for col in df.columns if col not in ['merge_date', 'datetime_utc', 'timestamp', 'target'] and 'unnamed' not in col]
-    
     # --- 3. Clean Data ---
-    # Drop the last row because it has no target. Also drop NaNs from feature engineering.
-    # --- 3. Clean Data ---
-    # Only drop rows where there is an NaN in any of the *required* training columns (features + target).
-    # This is much safer than df.dropna() which drops based on ALL columns.
-    data_clean = df
+    # Define the columns that MUST NOT have NaNs for training
+    required_cols = [col for col in df.columns if col not in ['merge_date', 'datetime_utc', 'timestamp', 'unnamed'] and 'unnamed' not in col]
+    required_cols.append('target') # Ensure the new target is included
 
-    # 🛑 Check the result after cleaning
+    # Drop rows based on the required columns
+    data_clean = df.dropna(subset=required_cols).reset_index(drop=True)
+
+    # Check the result after cleaning
     if data_clean.empty:
         raise ValueError("The dataset is empty after dropping NaNs. Check your feature engineering steps for excessive NaN creation!")
     

@@ -64,7 +64,6 @@ def run_training_pipeline(
 
     df_preprocessed = preprocess_data(quant_path, google_path, interest_path)
     df_featured = feature_engineering(df_preprocessed)
-    print(df_featured)
     train_and_evaluate(df_featured, save_artifacts=save)
 
 
@@ -259,8 +258,8 @@ if __name__ == '__main__':
 
         if train_models:
             run_training_pipeline(ingest=True,
-                                  lookback_days = 2,#1095,
-                                  hours = 24,#26280,
+                                  lookback_days = 20,#1095,
+                                  hours = 480,#26280,
                                   batch_size = 32,
                                   model = "kk08/CryptoBERT",
                                   ir_lookback_days= 1095, #only do yearly increments: 365, 730, 1095,...
