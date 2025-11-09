@@ -251,27 +251,27 @@ if __name__ == '__main__':
         run_prediction_pipeline(q, g, i, args.models_dir)
     else:
         # Fallback to previous behavior if no subcommand provided
-        train_models = True
-        save_models = True
-        run_inference = False
+        train_models = False#True
+        save_models = False#True
+        run_inference = True#False
         forecast = False
 
         if train_models:
             run_training_pipeline(ingest=True,
-                                  lookback_days = 20,#1095,
-                                  hours = 480,#26280,
+                                  lookback_days = 1095,
+                                  hours = 26280,
                                   batch_size = 32,
                                   model = "kk08/CryptoBERT",
                                   ir_lookback_days= 1095, #only do yearly increments: 365, 730, 1095,...
                                   save = True,
-                                  max_results_per_query = 1)#2)
+                                  max_results_per_query = 2)
 
         if run_inference:
             try:
-                MODELS_DIRECTORY = r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\models\20251104_021130'
-                QUANT_PATH = r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\test_data\quant_bitcoin_test_20251104_0048.csv'
-                GOOGLE_PATH = r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\test_data\google_news_sentiment_test_20251104_0057_hours_400.csv'
-                INTEREST_PATH = r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\test_data\interest_rates_test_20251104_0057.csv'
+                MODELS_DIRECTORY = r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\models\20251108_233538'
+                QUANT_PATH = r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251108_155202\quant\quant_bitcoin_test_20251108_1552.csv'
+                GOOGLE_PATH = r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251108_155202\sentiment\google_news_sentiment_20251108_2335_days_1095.csv'
+                INTEREST_PATH = r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251108_155202\interest\interest_rates_test_20251108_2335.csv'
                 run_prediction_pipeline(QUANT_PATH, GOOGLE_PATH, INTEREST_PATH, MODELS_DIRECTORY)
             except Exception as e:
                 print(f"Exception Caught: {e}")

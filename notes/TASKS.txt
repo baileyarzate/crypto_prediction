@@ -1,13 +1,11 @@
-get everything working in one line
+do prediction
 
-make it work in one line, and make it easy to train more if needed
-
-send to email
-
-get working on other computer
+do residual correction to see if useful (in dedicated new script)
 
 put onto github & write a good readme with all documentation to get it running
 
 pull and make sure it runs
 
 write a post on linkedin with a cool picture and attach the github link
+
+LLM section 
