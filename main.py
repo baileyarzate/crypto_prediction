@@ -69,10 +69,8 @@ def run_training_pipeline(
 
 def run_prediction_pipeline(quant_path, google_path, interest_path, models_dir):
     df_preprocessed = preprocess_data(quant_path, google_path, interest_path)
-    print(df_preprocessed[['datetime_utc','open', 'close', 'high', 'low', 'weighted_sentiment']])
-
+    df_preprocessed.columns = df_preprocessed.columns.str.replace('_x$', '', regex=True)
     historical_df = df_preprocessed
-
     print("--- Starting Prediction ---")
     all_predictions = predict_next_day(historical_df, models_dir)
     if all_predictions:
@@ -81,6 +79,7 @@ def run_prediction_pipeline(quant_path, google_path, interest_path, models_dir):
         for model_name, pred_price in all_predictions.items():
             print(f"  - {model_name}: {pred_price:.2f}")
         print("==============================================")
+    return historical_df, all_predictions
 
 
 def ingest_paths(
@@ -253,18 +252,21 @@ if __name__ == '__main__':
         # Fallback to previous behavior if no subcommand provided
         train_models = False#True
         save_models = False#True
-        run_inference = True#False
+        run_inference = False
         forecast = False
 
         if train_models:
-            run_training_pipeline(ingest=True,
+            run_training_pipeline(ingest=False,
                                   lookback_days = 1095,
                                   hours = 26280,
                                   batch_size = 32,
                                   model = "kk08/CryptoBERT",
                                   ir_lookback_days= 1095, #only do yearly increments: 365, 730, 1095,...
                                   save = True,
-                                  max_results_per_query = 2)
+                                  max_results_per_query = 2,
+                                  quant_path=r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251108_155202\quant\quant_bitcoin_test_20251108_1552.csv',
+                                  interest_path=r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251108_155202\interest\interest_rates_test_20251108_2335.csv',
+                                  google_path=r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251108_155202\sentiment\google_news_sentiment_20251108_2335_days_1095.csv')
 
         if run_inference:
             try:
@@ -282,5 +284,5 @@ if __name__ == '__main__':
             new_quant_path = get_quant_data()
             new_google_path = extract_google_sentiment()
             new_interest_path = get_interest_data()
-            print("\nStep 3: Running inference...")
+            print("\nStep 2: Running inference...")
             run_prediction_pipeline(new_quant_path, new_google_path, new_interest_path, MODELS_DIRECTORY)

@@ -51,16 +51,21 @@ def preprocess_data(quant_path, google_path, interest_path):
 
     # --- 4. Prepare and Align Google Sentiment Data ---
     # Process dates
-    df_google['published'] = pd.to_datetime(df_google['published'], format="%a, %d %b %Y %H:%M:%S %Z", utc=True, errors='coerce')
-    df_google.dropna(subset=['published'], inplace=True)
-    df_google['merge_date'] = df_google['published'].dt.tz_convert(None).dt.normalize()
+    try:
+        df_google['published'] = pd.to_datetime(df_google['published'], format="%a, %d %b %Y %H:%M:%S %Z", utc=True, errors='coerce')
+        df_google.dropna(subset=['published'], inplace=True)
+        df_google['merge_date'] = df_google['published'].dt.tz_convert(None).dt.normalize()
+    except: pass
     
     # Aggregate to daily sentiment
     numeric_cols = df_google.select_dtypes(include=np.number).columns.tolist()
     df_google_agg = df_google.groupby('merge_date')[numeric_cols].mean().reset_index()
 
     # Create the 'day-ahead' key. Sentiment from Jan 1st will be applied to data from Jan 2nd.
-    df_google_agg['merge_date'] = df_google_agg['merge_date'] + pd.DateOffset(days=1) # type: ignore
+    #df_google_agg['merge_date'] = df_google_agg['merge_date'] + pd.DateOffset(days=1) # type: ignore
+    df_google_agg['merge_date'] = pd.to_datetime(df_google_agg['merge_date'], errors='coerce')
+    df_google_agg['merge_date'] = df_google_agg['merge_date'] + pd.DateOffset(days=1)
+
     
     # Now, merge this aligned sentiment data
     df_final = pd.merge(df_merged, df_google_agg, on='merge_date', how='left')
@@ -184,11 +189,26 @@ def train_and_evaluate(df, save_artifacts=False):
     rf_preds = rf_model.predict(X_test_scaled)
     xgb_preds = xgb_model.predict(X_test_scaled)
     #arima_preds = arima_model_fit.forecast(steps=len(y_test))
+
+    # prophet was giving an MAE of ~40,000
+    # print("--- Training Prophet ---")
+    # df_prophet = data_clean[['datetime_utc', 'target']].rename(columns={'datetime_utc': 'ds', 'target': 'y'})
+    # df_prophet['ds'] = pd.to_datetime(df_prophet['ds'], utc=True)  # convert and mark as UTC
+    # df_prophet['ds'] = df_prophet['ds'].dt.tz_localize(None)       # make naive
+    # df_prophet = df_prophet.sort_values('ds').reset_index(drop=True)
+    # from prophet import Prophet
+    # prophet_model = Prophet()
+    # prophet_model.fit(df_prophet[:-len(y_test)])  # Train on all but last test days
+    # future = prophet_model.make_future_dataframe(periods=len(y_test), freq='D')
+    # prophet_preds = prophet_model.predict(future)['yhat'].tail(len(y_test)).values
+    # prophet_preds = pd.Series(prophet_preds).fillna(method='ffill').values
     
+
     results['Linear Regression'] = {'MAE': mean_absolute_error(y_test, mlr_preds)}
     results['Ridge Regression (0.5)'] = {'MAE': mean_absolute_error(y_test, ridge_preds)}
     results['Random Forest'] = {'MAE': mean_absolute_error(y_test, rf_preds)}
     results['XGBoost'] = {'MAE': mean_absolute_error(y_test, xgb_preds)}
+    #results['Prophet'] = {'MAE': mean_absolute_error(y_test, prophet_preds)}
     
     #dropped ARIMA model. Models with more context are outperforming ARIMA. 
     #results[f'ARIMA (1,1,3)'] = {'MAE': mean_absolute_error(y_test, arima_preds)}

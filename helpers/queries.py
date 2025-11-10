@@ -92,3 +92,20 @@ def subreddit_queries():
         # --- Influencers ---
         "elonmusk",
     ]
+
+def urls():
+    return ["https://www.reddit.com/r/Bitcoin/",
+    "https://www.reddit.com/r/cryptomarkets/",
+    "https://twitter.com/Bitcoin",
+    "https://twitter.com/CoinDesk",
+    "https://twitter.com/crypto",
+    "https://www.coindesk.com/",
+    "https://cointelegraph.com/",
+    "https://www.theblock.co/",
+    "https://decrypt.co/",
+    "https://www.newsbtc.com/",
+    "https://cryptoslate.com/",
+    "https://www.bitcoinmagazine.com/",
+    "https://www.tradingview.com/symbols/BTCUSD/",
+    "https://www.coinmarketcap.com/currencies/bitcoin/",
+    "https://www.coingecko.com/en/coins/bitcoin"]

@@ -25,7 +25,7 @@ return_df=True. If you set save=False, you must set return_df=True.
 
 # --- Paths for saving data ---
 # Use relative paths from the project root for portability
-DEFAULT_SAVE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'test_data')
+DEFAULT_SAVE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
 SAVE_DIR = os.environ.get('SAVE_DIR', DEFAULT_SAVE_DIR)
 
 def _ensure_dir(path: str) -> None:
@@ -242,7 +242,7 @@ def extract_google_sentiment(
     model_name: str = "kk08/CryptoBERT",
     tokenizer_name: Optional[str] = None,
     max_results_per_query: Optional[int] = 5,  # Default 5/day to meet 5/day total goal
-    return_df: bool = False,
+    return_df: bool = True,
 ):
     """
     Fetches Google News sentiment by looping day-by-day for a historical period
@@ -364,7 +364,8 @@ def extract_google_sentiment(
 
     # --- Save / Return ---
     if not save and not return_df:
-        raise ValueError("Nothing to return: set save=True or return_df=True")
+        print("Nothing to return: set save=True or return_df=True. Setting return_df to True")
+        return_df = True
 
     out_path = None
     if save:
@@ -380,147 +381,6 @@ def extract_google_sentiment(
     if return_df:
         return df_sentiment
     return out_path
-
-# def extract_google_sentiment(
-#     hours: int = 24000,  # 1000 days * 24 hours
-#     save: bool = True,
-#     save_dir: Optional[str] = None,
-#     queries: Optional[Iterable[Tuple[str, int]]] = None,
-#     batch_size: int = 32,
-#     model_name: str = "kk08/CryptoBERT",
-#     tokenizer_name: Optional[str] = None,
-#     max_results_per_query: Optional[int] = 1, # Default to 1 article per query
-#     return_df: bool = False,
-# ):
-#     """
-#     Fetches Google News sentiment by looping day-by-day for a historical period
-#     and applying a rate-limit delay after each API query.
-#     """
-#     try:
-#         # Avoid network fetch; fail fast if model isn't cached locally
-#         tokenizer = BertTokenizer.from_pretrained(model_name, local_files_only=True)
-#         model = BertForSequenceClassification.from_pretrained(model_name, local_files_only=True)
-#         sentiment_pipeline = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
-#     except Exception as e:
-#         print(f"Warning: sentiment model load failed: {e}. Proceeding without model; downstream will set zeros.")
-#         sentiment_pipeline = None  # type: ignore
-
-#     # Initialize the client
-#     try:
-#         client = GoogleNewsClient(language="en", country="US")
-#     except Exception as e:
-#         print(f"Warning: GoogleNews client failed: {e}. Returning empty sentiment; downstream will set zeros.")
-#         client = None  # type: ignore
-
-#     def clean_html(raw_html):
-#         return BeautifulSoup(raw_html, "html.parser").get_text(strip=True)
-
-#     def _apply_sentiment_batch(df, batch_size=32):
-#         if df.empty:
-#             df['post'] = pd.Series(dtype=str)
-#             df['weighted_sentiment'] = pd.Series(dtype=float)
-#             return df
-#         if sentiment_pipeline is None:
-#             df['post'] = df['title'] + ' ' + df['summary']
-#             df['weighted_sentiment'] = 0.0
-#             return df.drop(columns=['title', 'summary'], errors='ignore')
-
-#         texts_title = df['title'].tolist()
-#         texts_summary = df['summary'].tolist()
-#         title_results, summary_results = [], []
-
-#         for i in tqdm(range(0, len(df), batch_size), desc="Batch sentiment"):
-#             batch_title = texts_title[i:i+batch_size]
-#             batch_summary = texts_summary[i:i+batch_size]
-#             title_batch_result = sentiment_pipeline(batch_title)
-#             summary_batch_result = sentiment_pipeline(batch_summary)
-#             title_results.extend(title_batch_result) # type: ignore
-#             summary_results.extend(summary_batch_result) # type: ignore
-
-#         def signed_score(result):
-#             label = result['label']
-#             score = result['score']
-#             if label == "LABEL_0": return -score
-#             elif label == "LABEL_1": return score
-#             else: return 0
-
-#         df['title_sentiment'] = [signed_score(r) for r in title_results]
-#         df['summary_sentiment'] = [signed_score(r) for r in summary_results]
-#         df['post'] = df['title'] + ' ' + df['summary']
-#         df['weighted_sentiment'] = 0.7 * df['title_sentiment'] + 0.3 * df['summary_sentiment']
-#         df = df.drop(columns=['title', 'summary', 'title_sentiment', 'summary_sentiment'], errors='ignore')
-#         return df
-
-#     # --- Single-range fetching logic: 1 article per query over the whole range ---
-#     if client is None:
-#         print("GoogleNewsClient failed to initialize. Cannot fetch articles.")
-#         df = pd.DataFrame(columns=["query", 'time_period', "title", "summary", "published"])  # type: ignore
-#         return _apply_sentiment_batch(df, batch_size)
-
-#     def get_dynamic_dates(hours_ago: int):
-#         now = datetime.utcnow()
-#         start_time = now - timedelta(hours=hours_ago)
-#         return start_time.strftime("%Y-%m-%dT%H:%M:%SZ"), now.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-#     # Determine after/before once for the whole pull
-#     after, before = get_dynamic_dates(hours)
-
-#     # Build queries list
-#     if queries is None:
-#         try:
-#             queries_list = [q for q, _limit in crypto_queries_with_limits(scale=1)]
-#         except Exception:
-#             queries_list = ["Bitcoin"]
-#     else:
-#         queries_list = [q for q, _limit in queries]
-
-#     cap = max_results_per_query or 1
-#     rows = []
-#     for query in tqdm(queries_list, desc='extracting articles from queries...'):
-#         try:
-#             articles = client.search(
-#                 query,
-#                 after=after[:10],  # API accepts YYYY-MM-DD
-#                 before=before[:10],
-#                 max_results=cap,
-#             )
-#         except Exception as e:
-#             print(f"Warning: news search failed for '{query}': {e}. Skipping.")
-#             articles = []
-#         for a in articles:
-#             title = clean_html(a.get("title", ""))
-#             summary = clean_html(a.get("summary", ""))
-#             published = a.get("published", "")
-#             rows.append([query, hours, title, summary, published])
-
-#     if rows:
-#         df = pd.DataFrame(rows, columns=["query", 'time_period', "title", "summary", "published"])  # type: ignore
-#         df = df.drop_duplicates(subset=['title', 'summary'])
-#     else:
-#         df = pd.DataFrame(columns=["query", 'time_period', "title", "summary", "published"])  # type: ignore
-
-#     tqdm.pandas(desc="Applying sentiment analysis")
-#     df = _apply_sentiment_batch(df, batch_size)
-
-#     if not save and not return_df:
-#         raise ValueError("Nothing to return: set save=True or return_df=True")
-
-#     out_path: Optional[str] = None
-#     if save:
-#         out_dir = save_dir or SAVE_DIR
-#         _ensure_dir(out_dir)
-#         timestamp_str = datetime.now(pytz.timezone("America/Los_Angeles")).strftime("%Y%m%d_%H%M")
-#         out_path = os.path.join(out_dir, f'google_news_sentiment_test_{timestamp_str}_hours_{hours}.csv')
-#         df.to_csv(out_path, index=False)
-#         print(f"Google sentiment data saved to: {out_path}")
-
-#     if return_df and save:
-#         return df, out_path
-#     if return_df and not save:
-#         return df
-#     return out_path
-
-
 
 if __name__ == "__main__":
     # Minimal CLI for ad-hoc ingestion
