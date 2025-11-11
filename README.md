@@ -114,9 +114,7 @@ python helpers/data_ingestation.py news --hours 26280 --batch-size 32 --model kk
 
 **Typical usage**
 ```bash
-python standalone_training/train.py --help
-python standalone_training/train.py --ingest --save-models
-python standalone_training/train.py --paths PATH_TO_QUANT.csv PATH_TO_GOOGLE.csv PATH_TO_INTEREST.csv --save-models
+#refer to train_with_training_data.ipynb
 ```
 
 **Notes**
