@@ -159,7 +159,7 @@ def ingest_paths(
         timeframe=timeframe,
         lookback_days=lookback_days,
     )
-    google_path = extract_google_sentiment(
+    google_path,_ = extract_google_sentiment(
         hours=hours,
         save=True,
         save_dir=sentiment_dir,
