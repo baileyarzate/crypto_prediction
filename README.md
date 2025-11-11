@@ -1,4 +1,4 @@
-# BitcoinPred
+# Bitcoin Prediction
 
 Predicts the next-day Bitcoin close using classical ML models and engineered features from:
 - Quant OHLCV prices (ccxt)
