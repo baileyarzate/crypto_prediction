@@ -54,7 +54,7 @@ helpers/feature_engineering.py: RSI, lags, rolling stats, volatility, momentum f
 helpers/llm_support.py: Prompt builder and citation helper for LLM post-analysis.
 helpers/queries.py: Predefined queries for news sources and social channels.
 analysis/true_vs_predicted.ipynb: Compares model predictions to actual closes.
-LLM_regression.ipynb: Notebook driving the prediction pipeline and building an LLM prompt.
+next_day_forecast_llm.ipynb: Notebook driving the prediction pipeline and building an LLM prompt.
 models/: Timestamped folders with saved artifacts (mlr_model.joblib, ridge_model.joblib, rf_model.joblib, xgb_model.joblib, scaler.joblib, feature_list.joblib).
 data/: Timestamped subfolders created by ingestion (quant/, sentiment/, interest/).
 Quick Usage
@@ -99,7 +99,7 @@ Models:
 models/{YYYYMMDD_HHMMSS}/[mlr|ridge|rf|xgb]_model.joblib, scaler.joblib, feature_list.joblib
 Notebooks
 
-LLM_regression.ipynb: Drives run_prediction_pipeline(...), prints model forecasts, and builds an LLM prompt via helpers/llm_support.get_prompt.
+next_day_forecast_llm.ipynb: Drives run_prediction_pipeline(...), prints model forecasts, and builds an LLM prompt via helpers/llm_support.get_prompt.
 analysis/true_vs_predicted.ipynb with analysis/true_vs_predicted_data.csv: Displays side-by-side predictions vs. actual closes (includes Gemini estimates from notes when present).
 Configuration
 
