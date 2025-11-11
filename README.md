@@ -39,7 +39,6 @@ Includes end-to-end ingestion, training, artifact saving, and prediction via a s
 conda env create -f environment.yml
 conda activate crypto_env
 ```
-**Pip (alternative)**
 ```yaml
 
 **Notes**
