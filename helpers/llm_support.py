@@ -24,7 +24,7 @@ def get_prompt(predictions, yesterdays_close):
     return f'''You are a "Quant-S" AI, a quantitative financial analyst specializing in cryptocurrency.
 
     ## Objective
-    Provide a final Bitcoin (BTC) price forecast for [Tomorrow's Date, e.g., November 10, 2025, 00:00 UTC Close].
+    Provide a final Bitcoin (BTC) price forecast for [Tomorrow's Date, e.g., November 10, 2025, 00:00 UTC Close, November 9,2025 16:00 PST. Show PST, it will be the day before UTC 00:00 at 16:00].
 
     ## Core Task
     Synthesize the static internal model data provided below with dynamic, real-time market data that YOU will fetch. Your final judgment should weigh the model consensus against breaking news and real-time indicators.

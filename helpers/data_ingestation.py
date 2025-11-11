@@ -241,7 +241,7 @@ def extract_google_sentiment(
     batch_size: int = 32,
     model_name: str = "kk08/CryptoBERT",
     tokenizer_name: Optional[str] = None,
-    max_results_per_query: Optional[int] = 5,  # Default 5/day to meet 5/day total goal
+    max_results_per_query = 5,  # Default 5/day to meet 5/day total goal
     return_df: bool = True,
 ):
     """
@@ -333,12 +333,9 @@ def extract_google_sentiment(
         after_date, before_date = start_time.strftime("%Y-%m-%d"), end_time.strftime("%Y-%m-%d")
 
         for query in queries_list:
-            # if api_call_count > 0 and api_call_count % 900 == 0:
-            #     print(f"Rate limit hit at {api_call_count} calls. Sleeping 60s...")
-            #     time.sleep(60)
-
             try:
                 articles = client.search(query, after=after_date, before=before_date, max_results=cap)
+                max_results_per_query = 5
                 if hours * max_results_per_query > 20:
                     time.sleep(1.05)  # add a 1.05-second pause after each API call
                 api_call_count += 1
@@ -376,11 +373,10 @@ def extract_google_sentiment(
         df_sentiment.to_csv(out_path, index=False)
         print(f"✅ Google sentiment data saved to: {out_path}")
 
-    if return_df and save:
+    if save:
         return df_sentiment, out_path
-    if return_df:
-        return df_sentiment
-    return out_path
+    else:
+        return df_sentiment, None
 
 if __name__ == "__main__":
     # Minimal CLI for ad-hoc ingestion

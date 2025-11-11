@@ -1,9 +1,7 @@
-Gemini 2.5 Pro:
+UTC Close == PST at 16:00 the day before
 
-Prediction for November 4, 2025 UTC Close:
-BTC/USD Closing Price Forecast: $104,060.00
-- Lower Bound: $103,500.00
-- Upper Bound: $104,900.00
+
+Gemini 2.5 Pro:
 
 Prediction for November 11, 2025 UTC Close:
 BTC/USD Closing Price Forecast: $106,200.00

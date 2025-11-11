@@ -67,7 +67,40 @@ def run_training_pipeline(
     train_and_evaluate(df_featured, save_artifacts=save)
 
 
-def run_prediction_pipeline(quant_path, google_path, interest_path, models_dir):
+def run_prediction_pipeline(
+    models_dir: str,
+    quant_path: str | None = None,
+    google_path: str | None = None,
+    interest_path: str | None = None,
+    # If ingest=True or any path is None, we'll call ingest_paths with options below
+    ingest: bool = False,
+    # Ingestion options (mirrors ingest_paths args)
+    save_dir: str | None = None,
+    exchange: str = "coinbase",
+    symbol: str = "BTC/USD",
+    timeframe: str = "1d",
+    lookback_days: int = 20,
+    hours: int = 480,
+    batch_size: int = 32,
+    model: str = "kk08/CryptoBERT",
+    max_results_per_query: int | None = None,
+    start_date: str | None = None,
+    ir_lookback_days: int = 365,):
+
+    if ingest or not (quant_path and google_path and interest_path):
+        quant_path, google_path, interest_path = ingest_paths(
+            save_dir=save_dir,
+            exchange=exchange,
+            symbol=symbol,
+            timeframe=timeframe,
+            lookback_days=lookback_days,
+            hours=hours,
+            batch_size=batch_size,
+            model=model,
+            max_results_per_query=max_results_per_query,
+            start_date=start_date,
+            ir_lookback_days=ir_lookback_days,
+        )
     df_preprocessed = preprocess_data(quant_path, google_path, interest_path)
     df_preprocessed.columns = df_preprocessed.columns.str.replace('_x$', '', regex=True)
     historical_df = df_preprocessed
@@ -93,7 +126,7 @@ def ingest_paths(
     hours=26280,
     batch_size=32,
     model="kk08/CryptoBERT",
-    max_results_per_query=None,
+    max_results_per_query=5,
     # interest
     start_date=None,
     ir_lookback_days=1095,
@@ -102,7 +135,7 @@ def ingest_paths(
 
     # Prepare a runtime-scoped directory under test_data (or provided save_dir)
     if save_dir is None:
-        base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_data')
+        base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
     else:
         base_dir = save_dir
     run_id = datetime.now(pytz.timezone("America/Los_Angeles")).strftime("%Y%m%d_%H%M%S")
