@@ -1,0 +1,3 @@
+close_date_utc,close_date_pst,linear_regression_pred ,ridge_regression_pred ,gemini_2_5_flash_pred ,gemini_2_5_pro_pred ,actual_close
+11102025-00:00 ,,106126,105840,105500,106200,105988
+11112025-00:00 ,,105479,105517,105700,,

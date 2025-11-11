@@ -1,89 +1,321 @@
 import sys
 import os
+from datetime import datetime
+import pytz
 import importlib
+import argparse
 from main_scripts import train
 importlib.reload(train)
 sys.path.append(os.getcwd())
-# Import the specific function 'train_and_evaluate' from the 'train' module
 from main_scripts.train import preprocess_data, train_and_evaluate
 from main_scripts.test import predict_next_day
 from helpers.feature_engineering import feature_engineering
-from helpers.data_ingestation import get_interest_data, get_quant_data, extract_google_sentiment
+from helpers.data_ingestation import (
+    get_interest_data,
+    get_quant_data,
+    extract_google_sentiment,
+)
 
-def run_training_pipeline(quant_path, google_path, interest_path, save = True):
-    """A wrapper function to run the full training pipeline."""
+import ctypes
+# Prevent system sleep while script is running
+ctypes.windll.kernel32.SetThreadExecutionState(0x80000002)
+
+
+def run_training_pipeline(
+    quant_path: str | None = None,
+    google_path: str | None = None,
+    interest_path: str | None = None,
+    save: bool = True,
+    # If ingest=True or any path is None, we'll call ingest_paths with options below
+    ingest: bool = False,
+    # Ingestion options (mirrors ingest_paths args)
+    save_dir: str | None = None,
+    exchange: str = "coinbase",
+    symbol: str = "BTC/USD",
+    timeframe: str = "1d",
+    lookback_days: int = 1095,
+    hours: int = 26280,
+    batch_size: int = 32,
+    model: str = "kk08/CryptoBERT",
+    max_results_per_query: int | None = None,
+    start_date: str | None = None,
+    ir_lookback_days: int = 1095,
+):
+    """
+    Train models using either curated file paths or freshly ingested data.
+
+    - If all three paths are provided and ingest is False, uses curated data.
+    - Otherwise (ingest=True or any path is None), ingests new data first.
+    """
+    if ingest or not (quant_path and google_path and interest_path):
+        quant_path, google_path, interest_path = ingest_paths(
+            save_dir=save_dir,
+            exchange=exchange,
+            symbol=symbol,
+            timeframe=timeframe,
+            lookback_days=lookback_days,
+            hours=hours,
+            batch_size=batch_size,
+            model=model,
+            max_results_per_query=max_results_per_query,
+            start_date=start_date,
+            ir_lookback_days=ir_lookback_days,
+        )
+
     df_preprocessed = preprocess_data(quant_path, google_path, interest_path)
     df_featured = feature_engineering(df_preprocessed)
     train_and_evaluate(df_featured, save_artifacts=save)
-    
-def run_prediction_pipeline(quant_path, google_path, interest_path, models_dir):
-    """
-    Full pipeline to preprocess new data, load artifacts, and make a prediction.
-    """
-    # 1. Preprocess Data
+
+
+def run_prediction_pipeline(
+    models_dir: str,
+    quant_path: str | None = None,
+    google_path: str | None = None,
+    interest_path: str | None = None,
+    # If ingest=True or any path is None, we'll call ingest_paths with options below
+    ingest: bool = False,
+    # Ingestion options (mirrors ingest_paths args)
+    save_dir: str | None = None,
+    exchange: str = "coinbase",
+    symbol: str = "BTC/USD",
+    timeframe: str = "1d",
+    lookback_days: int = 20,
+    hours: int = 480,
+    batch_size: int = 32,
+    model: str = "kk08/CryptoBERT",
+    max_results_per_query: int | None = None,
+    start_date: str | None = None,
+    ir_lookback_days: int = 365,):
+
+    if ingest or not (quant_path and google_path and interest_path):
+        quant_path, google_path, interest_path = ingest_paths(
+            save_dir=save_dir,
+            exchange=exchange,
+            symbol=symbol,
+            timeframe=timeframe,
+            lookback_days=lookback_days,
+            hours=hours,
+            batch_size=batch_size,
+            model=model,
+            max_results_per_query=max_results_per_query,
+            start_date=start_date,
+            ir_lookback_days=ir_lookback_days,
+        )
     df_preprocessed = preprocess_data(quant_path, google_path, interest_path)
-    print(df_preprocessed[['open','close','high','low','weighted_sentiment']])
-
-    # Assuming the last row is "today" and has an incomplete 'close'
-    
-    #inference when true value exists
-    #true_close_value = df_preprocessed.iloc[-2]['close'] # The value we want to compare against
-    #historical_df = df_preprocessed.iloc[:-2] # Use all data UP TO and not including the day we are predicting
-    
-    #forecasting
+    df_preprocessed.columns = df_preprocessed.columns.str.replace('_x$', '', regex=True)
     historical_df = df_preprocessed
-
-    # 3. Make predictions
-    # (This is the logic from your old predict_next_day function)
     print("--- Starting Prediction ---")
     all_predictions = predict_next_day(historical_df, models_dir)
-    # --- Print the Results ---
     if all_predictions:
         print("\n==============================================")
         print("Forecast for the Next Day:")
         for model_name, pred_price in all_predictions.items():
             print(f"  - {model_name}: {pred_price:.2f}")
         print("==============================================")
-        try:
-            print(f"True Next Day: {true_close_value}")
-            for model_name, pred_price in all_predictions.items():
-                print(f"  - {model_name} Error: {(true_close_value-pred_price):.2f}")
-            print("==============================================")
-        except:
-            print("Forecasting, no inference.")
-        
-if __name__ == '__main__':
-    train_models = False
-    save_models = False
-    run_inference = True
-    forecast = False
-    
-    if train_models:
-        QUANT_PATH = r'C:\Users\1617290819C\OneDrive - United States Air Force\Documents\PersonalProjects\BitcoinPred\data\1761320833.787191_year_daily.csv'
-        GOOGLE_PATH = r'C:\Users\1617290819C\OneDrive - United States Air Force\Documents\PersonalProjects\BitcoinPred\data\google_news_crypto_sentiment_20251030_2231_8600_hours.csv'
-        INTEREST_PATH = r'C:\Users\1617290819C\OneDrive - United States Air Force\Documents\PersonalProjects\BitcoinPred\data\interest_rates.csv'
-        run_training_pipeline(QUANT_PATH, GOOGLE_PATH, INTEREST_PATH, save = save_models)
-    
-    if run_inference:
-        try:# Path to the folder where the trained models are saved
-            MODELS_DIRECTORY = r'C:\Users\1617290819C\OneDrive - United States Air Force\Documents\PersonalProjects\BitcoinPred\models\20251104_002818'
-            # Paths to your NEW data files for prediction
-            QUANT_PATH = r'C:\Users\1617290819C\OneDrive - United States Air Force\Documents\PersonalProjects\BitcoinPred\test_data\quant_bitcoin_test_20251104_0048.csv'#r'C:\Users\1617290819C\OneDrive - United States Air Force\Documents\PersonalProjects\BitcoinPred\test_data\quant_bitcoin_20251102_2359.csv'
-            GOOGLE_PATH = r'C:\Users\1617290819C\OneDrive - United States Air Force\Documents\PersonalProjects\BitcoinPred\test_data\google_news_sentiment_test_20251104_0057_hours_400.csv'#r'C:\Users\1617290819C\OneDrive - United States Air Force\Documents\PersonalProjects\BitcoinPred\test_data\google_news_crypto_sentiment_20251102_2355_480_hours_TEST.csv'
-            INTEREST_PATH = r'C:\Users\1617290819C\OneDrive - United States Air Force\Documents\PersonalProjects\BitcoinPred\test_data\interest_rates_test_20251104_0057.csv'#r'C:\Users\1617290819C\OneDrive - United States Air Force\Documents\PersonalProjects\BitcoinPred\test_data\interest_rates_test_20251103_0000.csv'
-            run_prediction_pipeline(QUANT_PATH, GOOGLE_PATH, INTEREST_PATH, MODELS_DIRECTORY)
-        except Exception as e:
-            print(f"Exception Caught: {e}")
-    
-    if forecast:
-        MODELS_DIRECTORY = r'C:\Users\1617290819C\OneDrive - United States Air Force\Documents\PersonalProjects\BitcoinPred\models\20251104_002818'
-        # 1. Ingest new data and get the new file paths
-        print("\nStep 1: Ingesting fresh data...")
-        new_quant_path = get_quant_data()
-        new_google_path = extract_google_sentiment()
-        new_interest_path = get_interest_data()
+    return historical_df, all_predictions
 
-        # 2. Run inference using all available historical data to predict tomorrow
-        print("\nStep 3: Running inference...")
-        # We pass the full new dataframe. The inference function will use the last row's features.
-        run_prediction_pipeline(new_quant_path, new_google_path, new_interest_path, MODELS_DIRECTORY)
+
+def ingest_paths(
+    save_dir=None,
+    # quant
+    exchange="coinbase",
+    symbol="BTC/USD",
+    timeframe="1d",
+    lookback_days=1095,
+    # news
+    hours=26280,
+    batch_size=32,
+    model="kk08/CryptoBERT",
+    max_results_per_query=5,
+    # interest
+    start_date=None,
+    ir_lookback_days=1095,
+):
+    print("\nStep 1: Ingesting fresh data...")
+
+    # Prepare a runtime-scoped directory under test_data (or provided save_dir)
+    if save_dir is None:
+        base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+    else:
+        base_dir = save_dir
+    run_id = datetime.now(pytz.timezone("America/Los_Angeles")).strftime("%Y%m%d_%H%M%S")
+    run_dir = os.path.join(base_dir, run_id)
+    quant_dir = os.path.join(run_dir, 'quant')
+    sentiment_dir = os.path.join(run_dir, 'sentiment')
+    interest_dir = os.path.join(run_dir, 'interest')
+    try:
+        os.makedirs(quant_dir, exist_ok=True)
+        os.makedirs(sentiment_dir, exist_ok=True)
+        os.makedirs(interest_dir, exist_ok=True)
+    except Exception as e:
+        print(f"Warning creating run directories: {e}")
+    print(f"Saving this run's data under: {run_dir}")
+
+    quant_path = get_quant_data(
+        save=True,
+        save_dir=quant_dir,
+        exchange_name=exchange,
+        symbol=symbol,
+        timeframe=timeframe,
+        lookback_days=lookback_days,
+    )
+    _, google_path = extract_google_sentiment(
+        hours=hours,
+        save=True,
+        save_dir=sentiment_dir,
+        batch_size=batch_size,
+        model_name=model,
+        max_results_per_query=max_results_per_query,
+    )
+    interest_path = get_interest_data(
+        save=True,
+        save_dir=interest_dir,
+        lookback_days=ir_lookback_days,
+    )
+    return quant_path, google_path, interest_path
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(description="BitcoinPred pipeline")
+    sub = parser.add_subparsers(dest="cmd")
+
+    # Common ingestion args helper
+    def add_ingest_args(p):
+        p.add_argument("--save-dir", default=None)
+        # quant
+        p.add_argument("--exchange", default="coinbase")
+        p.add_argument("--symbol", default="BTC/USD")
+        p.add_argument("--timeframe", default="1d")
+        p.add_argument("--lookback-days", type=int, default=1095)
+        # news
+        p.add_argument("--hours", type=int, default=26280)
+        p.add_argument("--batch-size", type=int, default=32)
+        p.add_argument("--model", default="kk08/CryptoBERT")
+        p.add_argument("--max-results-per-query", type=int, default=1)
+        # interest
+        p.add_argument("--start-date", default=None)
+        p.add_argument("--ir-lookback-days", type=int, default=1095)
+
+    # train
+    p_train = sub.add_parser("train", help="Train models")
+    group_t = p_train.add_mutually_exclusive_group(required=False)
+    group_t.add_argument("--ingest", action="store_true", help="Ingest fresh data")
+    group_t.add_argument("--paths", nargs=3, metavar=("QUANT", "GOOGLE", "INTEREST"))
+    p_train.add_argument("--save-models", action="store_true")
+    add_ingest_args(p_train)
+
+    # predict
+    p_pred = sub.add_parser("predict", help="Predict next day")
+    p_pred.add_argument("--models-dir", required=True)
+    group_p = p_pred.add_mutually_exclusive_group(required=False)
+    group_p.add_argument("--ingest", action="store_true")
+    group_p.add_argument("--paths", nargs=3, metavar=("QUANT", "GOOGLE", "INTEREST"))
+    add_ingest_args(p_pred)
+
+    # forecast (always ingest)
+    p_fc = sub.add_parser("forecast", help="Ingest and predict")
+    p_fc.add_argument("--models-dir", required=True)
+    add_ingest_args(p_fc)
+
+    return parser
+
+
+if __name__ == '__main__':
+    parser = build_parser()
+    args = parser.parse_args()
+
+    if args.cmd == "train":
+        if args.ingest:
+            q, g, i = ingest_paths(
+                save_dir=args.save_dir,
+                exchange=args.exchange,
+                symbol=args.symbol,
+                timeframe=args.timeframe,
+                lookback_days=args.lookback_days,
+                hours=args.hours,
+                batch_size=args.batch_size,
+                model=args.model,
+                max_results_per_query=args.max_results_per_query,
+                start_date=args.start_date,
+                ir_lookback_days=args.ir_lookback_days,
+            )
+        elif args.paths:
+            q, g, i = args.paths
+        else:
+            parser.error("Provide --ingest or --paths QUANT GOOGLE INTEREST")
+        run_training_pipeline(q, g, i, save=args.save_models)
+
+    elif args.cmd == "predict":
+        if args.ingest:
+            q, g, i = ingest_paths(
+                save_dir=args.save_dir,
+                exchange=args.exchange,
+                symbol=args.symbol,
+                timeframe=args.timeframe,
+                lookback_days=args.lookback_days,
+                hours=args.hours,
+                batch_size=args.batch_size,
+                model=args.model,
+                max_results_per_query=args.max_results_per_query,
+                start_date=args.start_date,
+                ir_lookback_days=args.ir_lookback_days,
+            )
+        elif args.paths:
+            q, g, i = args.paths
+        else:
+            parser.error("Provide --ingest or --paths QUANT GOOGLE INTEREST")
+        run_prediction_pipeline(q, g, i, args.models_dir)
+
+    elif args.cmd == "forecast":
+        q, g, i = ingest_paths(
+            save_dir=args.save_dir,
+            exchange=args.exchange,
+            symbol=args.symbol,
+            timeframe=args.timeframe,
+            lookback_days=args.lookback_days,
+            hours=args.hours,
+            batch_size=args.batch_size,
+            model=args.model,
+            max_results_per_query=args.max_results_per_query,
+            start_date=args.start_date,
+            ir_lookback_days=args.ir_lookback_days,
+        )
+        run_prediction_pipeline(q, g, i, args.models_dir)
+    else:
+        # Fallback to previous behavior if no subcommand provided
+        train_models = False#True
+        save_models = False#True
+        run_inference = False
+        forecast = False
+
+        if train_models:
+            run_training_pipeline(ingest=False,
+                                  lookback_days = 1095,
+                                  hours = 26280,
+                                  batch_size = 32,
+                                  model = "kk08/CryptoBERT",
+                                  ir_lookback_days= 1095, #only do yearly increments: 365, 730, 1095,...
+                                  save = True,
+                                  max_results_per_query = 2,
+                                  quant_path=r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251108_155202\quant\quant_bitcoin_test_20251108_1552.csv',
+                                  interest_path=r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251108_155202\interest\interest_rates_test_20251108_2335.csv',
+                                  google_path=r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251108_155202\sentiment\google_news_sentiment_20251108_2335_days_1095.csv')
+
+        if run_inference:
+            try:
+                MODELS_DIRECTORY = r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\models\20251108_233538'
+                QUANT_PATH = r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251108_155202\quant\quant_bitcoin_test_20251108_1552.csv'
+                GOOGLE_PATH = r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251108_155202\sentiment\google_news_sentiment_20251108_2335_days_1095.csv'
+                INTEREST_PATH = r'C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251108_155202\interest\interest_rates_test_20251108_2335.csv'
+                run_prediction_pipeline(QUANT_PATH, GOOGLE_PATH, INTEREST_PATH, MODELS_DIRECTORY)
+            except Exception as e:
+                print(f"Exception Caught: {e}")
+
+        if forecast:
+            MODELS_DIRECTORY = r''
+            print("\nStep 1: Ingesting fresh data...")
+            new_quant_path = get_quant_data()
+            new_google_path = extract_google_sentiment()
+            new_interest_path = get_interest_data()
+            print("\nStep 2: Running inference...")
+            run_prediction_pipeline(new_quant_path, new_google_path, new_interest_path, MODELS_DIRECTORY)

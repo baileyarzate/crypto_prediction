@@ -1,13 +1,17 @@
-With Machine Learning for Input:
+UTC Close == PST at 16:00 the day before
 
-Prediction for November 4, 2025 Close:
-BTC/USD Closing Price Forecast: $104,060.00
-- Lower Bound: $103,500.00
-- Upper Bound: $104,900.00
 
-Without Machine Learning for Input:
+Gemini 2.5 Pro:
 
-Prediction for November 4, 2025 Close:
-BTC/USD Closing Price Forecast: $102,150.00
-- Lower Bound: $100,500.00
-- Upper Bound: $104,850.00
+Prediction for November 11, 2025 UTC Close:
+BTC/USD Closing Price Forecast: $106,200.00
+- Lower Bound: $98,500.00
+- Upper Bound: $107,500.00
+
+Gemini 2.5 Flash:
+
+Prediction for November 11, 2025 UTC Close:
+BTC/USD Closing Price Forecast: $105,500.00
+- Lower Bound: $104,000.00
+- Upper Bound: $107,000.00
+

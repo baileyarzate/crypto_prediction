@@ -51,19 +51,34 @@ def preprocess_data(quant_path, google_path, interest_path):
 
     # --- 4. Prepare and Align Google Sentiment Data ---
     # Process dates
-    df_google['published'] = pd.to_datetime(df_google['published'], format="%a, %d %b %Y %H:%M:%S %Z", utc=True, errors='coerce')
-    df_google.dropna(subset=['published'], inplace=True)
-    df_google['merge_date'] = df_google['published'].dt.tz_convert(None).dt.normalize()
+    try:
+        df_google['published'] = pd.to_datetime(df_google['published'], format="%a, %d %b %Y %H:%M:%S %Z", utc=True, errors='coerce')
+        df_google.dropna(subset=['published'], inplace=True)
+        df_google['merge_date'] = df_google['published'].dt.tz_convert(None).dt.normalize()
+    except: pass
     
     # Aggregate to daily sentiment
     numeric_cols = df_google.select_dtypes(include=np.number).columns.tolist()
     df_google_agg = df_google.groupby('merge_date')[numeric_cols].mean().reset_index()
 
     # Create the 'day-ahead' key. Sentiment from Jan 1st will be applied to data from Jan 2nd.
-    df_google_agg['merge_date'] = df_google_agg['merge_date'] + pd.DateOffset(days=1) # type: ignore
+    #df_google_agg['merge_date'] = df_google_agg['merge_date'] + pd.DateOffset(days=1) # type: ignore
+    df_google_agg['merge_date'] = pd.to_datetime(df_google_agg['merge_date'], errors='coerce')
+    df_google_agg['merge_date'] = df_google_agg['merge_date'] + pd.DateOffset(days=1)
+
     
     # Now, merge this aligned sentiment data
     df_final = pd.merge(df_merged, df_google_agg, on='merge_date', how='left')
+
+    # Ensure sentiment column exists and handle API-limit gaps
+    if 'weighted_sentiment' not in df_final.columns:
+        df_final['weighted_sentiment'] = 0.0
+        df_final['sentiment_missing'] = 1
+    else:
+        # Flag where sentiment was originally missing, then fill with zeros
+        missing_mask = df_final['weighted_sentiment'].isna()
+        df_final['sentiment_missing'] = missing_mask.astype(int)
+        df_final['weighted_sentiment'] = df_final['weighted_sentiment'].fillna(0.0)
 
     # --- 5. Final Filtering and Cleaning ---
     # Before dropping, sort and ffill 
@@ -72,7 +87,7 @@ def preprocess_data(quant_path, google_path, interest_path):
     # Forward-fill NaNs that might exist from the merge 
     df_final.ffill(inplace=True)
     
-    # Now, drop any remaining NaNs
+    # Now, drop any remaining NaNs (sentiment handled earlier)
     df_final.dropna(inplace=True)
     
     # Clean up helper columns
@@ -95,10 +110,17 @@ def train_and_evaluate(df, save_artifacts=False):
     # The 'close' column is now a feature, not the target.
     # We must exclude the new 'target' column from the features.
     features = [col for col in df.columns if col not in ['merge_date', 'datetime_utc', 'timestamp', 'target'] and 'unnamed' not in col]
-    
     # --- 3. Clean Data ---
-    # Drop the last row because it has no target. Also drop NaNs from feature engineering.
-    data_clean = df.dropna().reset_index(drop=True)
+    # Define the columns that MUST NOT have NaNs for training
+    required_cols = [col for col in df.columns if col not in ['merge_date', 'datetime_utc', 'timestamp', 'unnamed'] and 'unnamed' not in col]
+    required_cols.append('target') # Ensure the new target is included
+
+    # Drop rows based on the required columns
+    data_clean = df.dropna(subset=required_cols).reset_index(drop=True)
+
+    # Check the result after cleaning
+    if data_clean.empty:
+        raise ValueError("The dataset is empty after dropping NaNs. Check your feature engineering steps for excessive NaN creation!")
     
     X = data_clean[features]
     y = data_clean['target'] # Use the new 'target' column
@@ -167,11 +189,26 @@ def train_and_evaluate(df, save_artifacts=False):
     rf_preds = rf_model.predict(X_test_scaled)
     xgb_preds = xgb_model.predict(X_test_scaled)
     #arima_preds = arima_model_fit.forecast(steps=len(y_test))
+
+    # prophet was giving an MAE of ~40,000
+    # print("--- Training Prophet ---")
+    # df_prophet = data_clean[['datetime_utc', 'target']].rename(columns={'datetime_utc': 'ds', 'target': 'y'})
+    # df_prophet['ds'] = pd.to_datetime(df_prophet['ds'], utc=True)  # convert and mark as UTC
+    # df_prophet['ds'] = df_prophet['ds'].dt.tz_localize(None)       # make naive
+    # df_prophet = df_prophet.sort_values('ds').reset_index(drop=True)
+    # from prophet import Prophet
+    # prophet_model = Prophet()
+    # prophet_model.fit(df_prophet[:-len(y_test)])  # Train on all but last test days
+    # future = prophet_model.make_future_dataframe(periods=len(y_test), freq='D')
+    # prophet_preds = prophet_model.predict(future)['yhat'].tail(len(y_test)).values
+    # prophet_preds = pd.Series(prophet_preds).fillna(method='ffill').values
     
+
     results['Linear Regression'] = {'MAE': mean_absolute_error(y_test, mlr_preds)}
     results['Ridge Regression (0.5)'] = {'MAE': mean_absolute_error(y_test, ridge_preds)}
     results['Random Forest'] = {'MAE': mean_absolute_error(y_test, rf_preds)}
     results['XGBoost'] = {'MAE': mean_absolute_error(y_test, xgb_preds)}
+    #results['Prophet'] = {'MAE': mean_absolute_error(y_test, prophet_preds)}
     
     #dropped ARIMA model. Models with more context are outperforming ARIMA. 
     #results[f'ARIMA (1,1,3)'] = {'MAE': mean_absolute_error(y_test, arima_preds)}
