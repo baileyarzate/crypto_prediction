@@ -117,10 +117,6 @@ python helpers/data_ingestation.py news --hours 26280 --batch-size 32 --model kk
 #refer to train_with_training_data.ipynb
 ```
 
-**Notes**
-- Run from repo root to resolve paths/imports correctly.
-- Outputs align with main CLI: timestamped subfolders under `models/` and `data/` unless overridden.
-
 ---
 
 ## How It Works
