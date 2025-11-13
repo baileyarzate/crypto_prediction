@@ -13,6 +13,20 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Ridge
 import xgboost as xgb
 #from statsmodels.tsa.arima.model import ARIMA
+import logging
+# --- Setup Logging ---
+# Define the log file path relative to the current script's parent directory
+LOG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'logs', 'logs.txt')
+os.makedirs(os.path.dirname(LOG_FILE_PATH), exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE_PATH, mode='a'), # Append to the file
+        logging.StreamHandler() # Also print to console
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # 1. DATA PREPROCESSING FUNCTION
 import pandas as pd
@@ -97,7 +111,7 @@ def preprocess_data(quant_path, google_path, interest_path):
     return df_final.reset_index(drop=True)
 
 # 3. TRAINING AND EVALUATION FUNCTION
-def train_and_evaluate(df, save_artifacts=False):
+def train_and_evaluate(df, save_artifacts=False, selected_features = None):
     """
     Trains models to predict the *next day's* close price.
     """
@@ -120,6 +134,7 @@ def train_and_evaluate(df, save_artifacts=False):
 
     # Check the result after cleaning
     if data_clean.empty:
+        logger.error("The dataset is empty after dropping NaNs.")
         raise ValueError("The dataset is empty after dropping NaNs. Check your feature engineering steps for excessive NaN creation!")
     
     X = data_clean[features]
@@ -158,8 +173,11 @@ def train_and_evaluate(df, save_artifacts=False):
     # X_train_scaled = scaler.fit_transform(X_train_rfe)
     # X_test_scaled = scaler.transform(X_test_rfe)
     #######################uncomment block if needed again
-    selected_features = ['open', 'high', 'low', 'close', 'volume', 'weighted_sentiment', 'lag_1', 'lag_10', 
+    logger.info("-------------------------------------")
+    if selected_features is None: 
+        selected_features = ['open', 'high', 'low', 'close', 'volume', 'weighted_sentiment', 'lag_1', 'lag_10', 
                          'rolling_mean_5', 'rolling_mean_10', 'rolling_std_10', 'volatility_7', 'momentum_5', 'high_low_spread', 'momentum_x_volume', 'rsi_sq']
+    logger.info(f"\nSelected Features used for Training: {selected_features}")
     X_train = X_train[selected_features]   
     X_test = X_test[selected_features]
     features = selected_features
@@ -171,13 +189,20 @@ def train_and_evaluate(df, save_artifacts=False):
     print("--- Training and Evaluating Models ---")
     results = {}
     
+    HYPERPARAMS = {
+        'Linear Regression': {},
+        'Ridge Regression (0.5)': {'alpha': 0.5},
+        'Random Forest': {'n_estimators': 600, 'random_state': 42},
+        'XGBoost': {'colsample_bytree': 1.0, 'learning_rate': 0.03, 'max_depth': 7, 'n_estimators': 1200, 'subsample': 0.9}
+    }
     
+    for model_name, params in HYPERPARAMS.items():
+        logger.info(f"Model: {model_name}, Hyperparameters: {params}")
     # Train ML Models
     mlr_model = LinearRegression().fit(X_train_scaled, y_train)
-    ridge_model = Ridge(alpha=0.5, random_state=42).fit(X_train_scaled, y_train)
-    rf_model = RandomForestRegressor(n_estimators=600, random_state=42).fit(X_train_scaled, y_train)
-    xgb_model = xgb.XGBRegressor(colsample_bytree=1.0, learning_rate=0.03, max_depth= 7,n_estimators=1200, subsample = 0.9,
-                                 objective='reg:squarederror', random_state=42).fit(X_train_scaled, y_train)
+    ridge_model = Ridge(**HYPERPARAMS['Ridge Regression (0.5)'], random_state=42).fit(X_train_scaled, y_train)
+    rf_model = RandomForestRegressor(**HYPERPARAMS['Random Forest']).fit(X_train_scaled, y_train)
+    xgb_model = xgb.XGBRegressor(objective='reg:squarederror', random_state=42, **HYPERPARAMS['XGBoost']).fit(X_train_scaled, y_train)
     
     # Train Auto-ARIMA on the training data for a fair comparison
     #arima_model = ARIMA(y_train, order=(1,1,3))
@@ -214,6 +239,7 @@ def train_and_evaluate(df, save_artifacts=False):
     #results[f'ARIMA (1,1,3)'] = {'MAE': mean_absolute_error(y_test, arima_preds)}
     
     results_df = pd.DataFrame(results).T
+    logger.info(results_df.sort_values(by='MAE').to_markdown())
     print("\n--- Model Performance on Test Set ---")
     print(results_df.sort_values(by='MAE'))
 
@@ -227,11 +253,10 @@ def train_and_evaluate(df, save_artifacts=False):
 
         # Construct the save directory path using the parent directory
         save_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models', run_timestamp)
-        
-        # Create the directory if it doesn't exist
         os.makedirs(save_dir, exist_ok=True)
         
-        print(f"Artifacts will be saved in: {save_dir}")
+        #print(f"Artifacts will be saved in: {save_dir}")
+        logger.info(f"Artifacts will be saved in: {save_dir}")
 
         # Retrain final Auto-ARIMA on all available data for the best forecast
         #final_arima_model = ARIMA(y, order=(1, 1, 0)).fit()
@@ -245,13 +270,3 @@ def train_and_evaluate(df, save_artifacts=False):
         joblib.dump(features, os.path.join(save_dir, 'feature_list.joblib'))
         
         print("--- Artifacts Saved Successfully ---")
-
-# def train(QUANT_PATH, GOOGLE_PATH, INTEREST_PATH) -> None:
-#     # 1. Preprocess the raw data
-#     preprocessed_df = preprocess_data(QUANT_PATH, GOOGLE_PATH, INTEREST_PATH)
-#     # 2. Engineer features
-#     featured_df = feature_engineering(preprocessed_df)
-#     # 3. Train models and save artifacts if desired
-#     # Set save_artifacts to True to save the models for your prediction script
-#     train_and_evaluate(featured_df, save_artifacts=True)
-#     print("Models trained successfully.")
