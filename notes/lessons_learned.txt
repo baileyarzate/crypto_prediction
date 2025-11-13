@@ -1,0 +1,28 @@
+- Data Quantity and Frequency Define Model Choice
+Deep learning architectures like LSTM, Transformer-based regressors, and Prophet performed poorly (MAE ≈ 40,000) compared to linear and ensemble models.
+The takeaway: daily-close prediction lacks the temporal density to justify sequence-heavy architectures. 
+Traditional models with strong inductive bias (Ridge, Random Forest, XGBoost) generalize better when data is limited and noise-dominated.
+
+- Predictability Saturates Quickly in Financial Time Series
+Even with engineered features (momentum, RSI, volatility, rolling stats), incremental gains plateaued. A reminder that market data is largely stochastic at short horizons. 
+Improvement comes more from feature creativity and residual modeling than from increasing algorithmic complexity.
+
+- Residual Modeling Adds Nuance but Not Always Accuracy
+Residual correction with XGBoost captured some nonlinearity but didn’t consistently outperform Linear or Ridge Regression.
+This reinforced a key insight: meta-models amplify residual noise unless the base model underfits. In low-signal domains, simplicity often wins.
+
+- Feature Engineering is the Real Alpha
+Adding technical indicators, rolling statistics, and interaction terms provided most of the predictive lift. 
+In particular, momentum × volume, rsi^2, and volatility features improved Ridge and Linear Regression stability.
+The process validated that domain-inspired features outperform brute-force architectures when data is scarce.
+
+- Evaluation Strategy Matters More Than Raw Accuracy
+Switching from random splits to chronological train/test partitions provided more realistic estimates of forward performance. 
+This emphasized that temporal leakage can falsely inflate metrics, especially in financial forecasting.
+
+- Automation Enables True Experimentation
+By modularizing data prep, feature engineering, and model evaluation, retraining became trivial, unlocking faster iteration and clearer comparisons.
+
+- Transparency Beats Hype
+Documenting poor-performing models (Prophet, LSTM, Transformer) strengthened credibility more than omitting them. 
+It demonstrated genuine scientific discipline, testing, measuring, and keeping what works.

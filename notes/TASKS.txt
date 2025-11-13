@@ -1,7 +1,3 @@
-do prediction
-
-do residual correction to see if useful (in dedicated new script)
-
 put onto github & write a good readme with all documentation to get it running
 
 pull and make sure it runs
