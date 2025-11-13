@@ -11,6 +11,9 @@ End-to-end pipeline for forecasting Bitcoin’s next-day close. The project inge
 - **Model ensemble**: Linear Regression, Ridge, Random Forest, and XGBoost with shared scaler + feature list artifacts.
 - **Streamlit dashboard**: run forecasts, trigger fresh ingestion, compare model outputs, chart price history in UTC or Pacific time, and request Gemini commentary with citations.
 - **Reproducible CLI + notebooks**: train/predict scripts, analysis notebooks, and timestamped `data/` + `models/` directories for every run.
+- **Quantitative Performance**: Validation across multiple models using Mean Absolute Error (MAE) ![Model MAE Table](crypto_prediction/notes/images/model_performances.png)
+- **Interpretability**: Dives into model feature influence using SHAP ![SHAP Plot](crypto_prediction/notes/images/model_feature_importance.png)
+- Model Fit: Visual comparison showing how the best-performing models track the actual historical close price. ![Model Fit Plot](crypto_prediction/notes/images/actual_vs_predicted_close.png)
 
 ---
 
@@ -42,6 +45,7 @@ Gemini is only required if you want AI commentary inside Streamlit.
 ```bash
 streamlit run streamlit_app.py
 ```
+![Bitcoin Prediction Dashboard](crypto_prediction/notes/images/bitcoin_dashboard_predictions.png)
 
 Key workflow:
 1. Pick a saved `models/` run; paths auto-populate.
@@ -49,6 +53,7 @@ Key workflow:
 3. Adjust the history slider and timezone (UTC or Pacific with DST) for the chart + preview table.
 4. Run the forecast. Results persist in-session so you can tweak settings without re-running the pipeline.
 5. (Optional) Toggle **AI prediction and commentary** to call Gemini; citations are appended automatically via Google Search tools.
+6. ![Optional AI Commentary](crypto_prediction/notes/images/bitcoin_dashboard_AI_commentary.png)
 
 Outputs include:
 - Summary metrics (latest close, ensemble average, model spread).
