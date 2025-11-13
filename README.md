@@ -53,7 +53,7 @@ Key workflow:
 3. Adjust the history slider and timezone (UTC or Pacific with DST) for the chart + preview table.
 4. Run the forecast. Results persist in-session so you can tweak settings without re-running the pipeline.
 5. (Optional) Toggle **AI prediction and commentary** to call Gemini; citations are appended automatically via Google Search tools.
-6. ![Optional AI Commentary](notes/images/bitcoin_dashboard_AI_commentary.png)
+![Optional AI Commentary](notes/images/bitcoin_dashboard_AI_commentary.png)
 
 Outputs include:
 - Summary metrics (latest close, ensemble average, model spread).
