@@ -1,205 +1,156 @@
 # BitcoinPred
 
-Predicts the next-day Bitcoin close using classical ML models and engineered features from:
-- Quant OHLCV prices (ccxt)
-- Google News sentiment (optionally via a local CryptoBERT sentiment pipeline)
-- US Treasury average interest rates (Fiscal Data API)
-
-Includes end-to-end ingestion, training, artifact saving, and prediction via a simple CLI.
+End-to-end pipeline for forecasting Bitcoin’s next-day close. The project ingests market data, engineers technical + macro features, trains a small ensemble of classical models, and surfaces predictions in both a CLI and a Streamlit dashboard (with optional LLM commentary).
 
 ---
 
-## Overview
+## Highlights
 
-**Ingestion**
-- Prices from the selected exchange/symbol/timeframe.
-- Google News sentiment aggregated day-by-day with optional local sentiment scoring.
-- US Treasury interest rates pulled year-by-year.
-
-**Preprocessing**
-- Aligns interest rates from month M−1 to month M.
-- Aligns daily news sentiment from day D−1 to day D (day-ahead merge).
-
-**Feature Engineering**
-- Lagged prices, rolling means/std, RSI, volatility, momentum, and simple interactions.
-
-**Models**
-- Linear Regression, Ridge, Random Forest, XGBoost
-- StandardScaler and curated feature list are saved with each run.
-
-**Prediction**
-- Loads most recent historical data, recomputes features, scales, and produces next-day close forecasts from saved models.
+- **Multi-source ingestion**: OHLCV via ccxt, Google News sentiment with optional `kk08/CryptoBERT`, and US Treasury yield curves (Fiscal Data API).
+- **Consistent feature store**: rolling stats, RSI, volatility, momentum, interest rate pivots, and day-ahead sentiment alignment.
+- **Model ensemble**: Linear Regression, Ridge, Random Forest, and XGBoost with shared scaler + feature list artifacts.
+- **Streamlit dashboard**: run forecasts, trigger fresh ingestion, compare model outputs, chart price history in UTC or Pacific time, and request Gemini commentary with citations.
+- **Reproducible CLI + notebooks**: train/predict scripts, analysis notebooks, and timestamped `data/` + `models/` directories for every run.
 
 ---
 
-## Environment Setup
+## Getting Started
 
-**Conda (recommended)**
+### 1. Create an environment
+
 ```bash
 conda env create -f environment.yml
 conda activate crypto_env
+# or
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+pip install -r requirements.txt
 ```
-**Pip (alternative)**
-```yaml
 
-**Notes**
-- Google News sentiment: attempts to load Hugging Face model `kk08/CryptoBERT` locally; falls back with zero sentiment if unavailable.
-- ccxt uses public OHLCV endpoints; no API keys required for basic use.
+### 2. Configure secrets (optional)
+
+Create `.env` in the repo root:
+
 ```
----
-## Repository Structure
-main.py CLI entrypoint for training, prediction, and forecast
-main_scripts/train.py Preprocessing, feature selection, training, evaluation, artifact saving
-main_scripts/test.py Loads artifacts, recomputes features, predicts next-day close
-helpers/data_ingestation.py Ingests price, interest rate, and news sentiment data
-helpers/feature_engineering.py RSI, lags, rolling stats, volatility, momentum features
-helpers/llm_support.py LLM prompt builder and citation helper
-helpers/queries.py Predefined news/social queries
-analysis/true_vs_predicted.ipynb Compares predictions vs actual closes
-next_day_forecast_llm.ipynb Notebook driving prediction pipeline and LLM prompt
-models/ Timestamped folders with saved artifacts
-data/ Timestamped subfolders created by ingestion
-standalone_training/ Self-contained scripts for reproducible training/evaluation
+GEMINI_API_KEY=your-gemini-key
+SAVE_DIR=C:\path\to\custom\data        # optional override
+```
+
+Gemini is only required if you want AI commentary inside Streamlit.
 
 ---
 
-## Quick Usage
+## Streamlit Dashboard
 
-**Train with fresh data and save models**
 ```bash
-python main.py train --ingest --save-models
-# Optional flags: `--exchange`, `--symbol`, `--timeframe`, `--lookback-days`, `--hours`, `--batch-size`, `--model`, `--max-results-per-query`, `--ir-lookback-days`, `--save-dir`
+streamlit run streamlit_app.py
 ```
 
-**Predict using existing models and fresh ingestion**
-```bash
-python main.py predict --models-dir models/20251109_210801 --ingest
-```
+Key workflow:
+1. Pick a saved `models/` run; paths auto-populate.
+2. Choose an existing `data/` snapshot or toggle **“Ingest fresh data (~10-15 min)”** to pull a new 20-day window.
+3. Adjust the history slider and timezone (UTC or Pacific with DST) for the chart + preview table.
+4. Run the forecast. Results persist in-session so you can tweak settings without re-running the pipeline.
+5. (Optional) Toggle **AI prediction and commentary** to call Gemini; citations are appended automatically via Google Search tools.
 
-**Predict using curated file paths**
-```bash
-python main.py predict --models-dir models/20251109_210801 --paths PATH_TO_QUANT.csv PATH_TO_GOOGLE.csv PATH_TO_INTEREST.csv
-```
-
-**End-to-end forecast**
+Outputs include:
+- Summary metrics (latest close, ensemble average, model spread).
+- Chart with historical closes plus the Linear Regression prediction marker.
+- Downloadable prediction table and feature preview with both UTC and PST timestamps.
 
 ---
 
-## Standalone Ingestion
+## CLI Usage
 
-**Quant OHLCV**
+The CLI mirrors the dashboard but is script-friendly.
+
+### Train (fresh ingest + save artifacts)
 ```bash
-python helpers/data_ingestation.py quant --exchange coinbase --symbol "BTC/USD" --timeframe 1d --lookback-days 1095 --save-dir data
+python main.py train --ingest --save-models \
+    --lookback-days 1095 --hours 26280 --ir-lookback-days 1095
 ```
 
-**Interest rates**
+### Predict with fresh ingestion
 ```bash
-python helpers/data_ingestation.py interest --lookback-days 1095 --save-dir data
+python main.py predict --models-dir models/20251112_170018 --ingest
 ```
 
-**Google News sentiment**
+### Predict from curated CSV paths
 ```bash
-python helpers/data_ingestation.py news --hours 26280 --batch-size 32 --model kk08/CryptoBERT --max-results-per-query 1 --save-dir data
+python main.py predict --models-dir models/20251112_170018 \
+    --paths data/20251112_172623/quant/quant_bitcoin_test_20251112_1726.csv \
+            data/20251112_172623/sentiment/google_news_sentiment_20251112_1739_days_20.csv \
+            data/20251112_172623/interest/interest_rates_test_20251112_1739.csv
 ```
+
+All commands accept additional switches (`--exchange`, `--symbol`, `--timeframe`, `--max-results-per-query`, etc.). Use `python main.py --help` for the full matrix.
 
 ---
 
-## Standalone Training
-**Purpose**
-- Run small, self-contained training/evaluation scripts decoupled from CLI.
-- Mirrors main pipeline defaults: ingestion → preprocessing → features → training → artifacts.
+## Repository Tour
 
-**Location**
-- `standalone_training/`
-- Scripts print usage with `--help` and save artifacts under `models/`.
+| Path | Purpose |
+| --- | --- |
+| `main.py` | CLI entrypoint (train, predict, forecast) |
+| `streamlit_app.py` | Dashboard with ingestion toggle, charting, downloads, Gemini commentary |
+| `main_scripts/train.py` | Preprocess, engineer features, train/evaluate, persist artifacts |
+| `main_scripts/test.py` | Feature rebuild + model inference |
+| `helpers/data_ingestation.py` | Independent quant/news/interest ingestion commands |
+| `helpers/feature_engineering.py` | RSI, lags, rolling stats, volatility, momentum features |
+| `helpers/llm_support.py` | Prompt builder + citation helper for Gemini |
+| `helpers/queries.py` | Default news/search query lists |
+| `analysis/*.ipynb` | Evaluation visuals (`plots_for_readers.ipynb`, `true_vs_predicted.ipynb`, etc.) |
+| `standalone_training/` | Sandbox scripts/notebooks for reproducible experiments |
+| `data/{timestamp}/` | Saved CSV snapshots (quant, sentiment, interest) |
+| `models/{timestamp}/` | Serialized models (`mlr`, `ridge`, `rf`, `xgb`), scaler, feature list |
 
-**Typical usage**
-```bash
-python standalone_training/train.py --help
-python standalone_training/train.py --ingest --save-models
-python standalone_training/train.py --paths PATH_TO_QUANT.csv PATH_TO_GOOGLE.csv PATH_TO_INTEREST.csv --save-models
+---
+
+## Data + Artifacts
+
+Every ingest run creates:
 ```
-
-**Notes**
-- Run from repo root to resolve paths/imports correctly.
-- Outputs align with main CLI: timestamped subfolders under `models/` and `data/` unless overridden.
-
----
-
-## How It Works
-
-**Preprocessing (`main_scripts/train.py`)**
-- `merge_date` normalized from `datetime_utc`
-- Interest rates pivoted by `security_desc` and shifted 1 month forward
-- News sentiment aggregated by day, shifted 1 day forward
-
-**Features (`helpers/feature_engineering.py`)**
-- RSI(14), lags (1/5/10), rolling mean/std (5/10), volatility(7), momentum(5)
-- High-low spread, momentum×volume, rsi²
-
-**Training**
-- Time-ordered train/test split
-- Scaler fit on train
-- Models trained and evaluated (MAE)
-- Artifacts saved under `models/{YYYYMMDD_HHMMSS}/`
-
-**Prediction**
-- Reloads models, scaler, feature list
-- Recomputes features on latest data
-- Returns dict of model predictions
-
----
-
-## Data and Outputs
-
-**Ingestion output**
-```bash
-data/{YYYYMMDD_HHMMSS}/quant/quant_bitcoin_test_.csv
-data/{YYYYMMDD_HHMMSS}/sentiment/google_news_sentiment_.csv
+data/{YYYYMMDD_HHMMSS}/quant/quant_bitcoin_test_*.csv
+data/{YYYYMMDD_HHMMSS}/sentiment/google_news_sentiment_*.csv
 data/{YYYYMMDD_HHMMSS}/interest/interest_rates_test_*.csv
 ```
 
-**Models**
-```bash
-models/{YYYYMMDD_HHMMSS}/[mlr|ridge|rf|xgb]_model.joblib
-scaler.joblib
-feature_list.joblib
+Training saves to:
 ```
----
+models/{YYYYMMDD_HHMMSS}/mlr_model.joblib
+models/{YYYYMMDD_HHMMSS}/ridge_model.joblib
+models/{YYYYMMDD_HHMMSS}/rf_model.joblib
+models/{YYYYMMDD_HHMMSS}/xgb_model.joblib
+models/{YYYYMMDD_HHMMSS}/scaler.joblib
+models/{YYYYMMDD_HHMMSS}/feature_list.joblib
+```
 
-## Notebooks
-
-- `next_day_forecast_llm.ipynb`: runs prediction pipeline, prints forecasts, builds LLM prompt
-- `analysis/true_vs_predicted.ipynb`: side-by-side predictions vs actual closes
-
----
-
-## Configuration
-
-- `SAVE_DIR` env var overrides default data save location (otherwise under `data/`)
-- Timestamps handled in UTC; aligns UTC close with previous-day 16:00 PST
+The Streamlit app and CLI auto-discover these directories, so keeping timestamped folders untouched preserves reproducibility.
 
 ---
 
 ## Troubleshooting
 
-**Sentiment model unavailable**
-- Pipeline sets `weighted_sentiment=0.0` and logs a warning
-
-**Notebook tqdm warnings**
-- Install/enable `ipywidgets` to remove
-
-**Feature engineering guard**
-- Requires at least 15 rows of history; otherwise prediction aborts
-
-**Known issues**
-- Malformed f-string in `helpers/feature_engineering.py` error print
-- Some console output has garbled characters from copy/paste
+- **Sentiment model missing**: if `kk08/CryptoBERT` cannot be loaded, sentiment defaults to `0.0`; warnings are logged.
+- **Feature guard**: predictions need at least 15 historical rows after preprocessing; otherwise the pipeline aborts early.
+- **Gemini errors**: ensure `GEMINI_API_KEY` is set; the dashboard will gracefully disable commentary when unavailable.
+- **Widget deprecations**: the app already uses the new `width` parameter (replacing `use_container_width`) to stay compatible with Streamlit >= 1.40.
 
 ---
 
-## Optional LLM Support
+## Notebooks
 
-**helpers/llm_support.py**
-- `get_prompt(predictions, yesterdays_close)`: structured forecasting prompt for LLM
-- `add_citations(response)`: attach citation links if metadata available
+- `analysis/plots_for_readers.ipynb` – curated visuals for presentations/blog posts.
+- `analysis/true_vs_predicted.ipynb` – compares model forecasts vs actual closes.
+- `next_day_forecast_llm.ipynb` – scripted forecast run with LLM prompt generation.
+- `standalone_training/train_with_training_data.ipynb` – reproducible training experiments outside the CLI.
+
+---
+
+## Roadmap Ideas
+
+- Expand model zoo (CatBoost/LightGBM, simple LSTM baseline).
+- Deploy Streamlit as a scheduled Cloud Run/Spaces app.
+- Add automated backtesting metrics and alerting hooks.
+
+Contributions, issues, and feature requests are welcome!

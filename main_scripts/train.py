@@ -175,8 +175,7 @@ def train_and_evaluate(df, save_artifacts=False, selected_features = None):
     #######################uncomment block if needed again
     logger.info("=" * 60)
     if selected_features is None: 
-        selected_features = ['open', 'high', 'low', 'close', 'volume', 'weighted_sentiment', 'lag_1', 'lag_10', 
-                         'rolling_mean_5', 'rolling_mean_10', 'rolling_std_10', 'volatility_7', 'momentum_5', 'high_low_spread', 'momentum_x_volume', 'rsi_sq']
+        selected_features = selected_features = ['lag_10', 'rolling_mean_10', 'low', 'close', 'high', 'rolling_mean_5', 'open', 'lag_1', 'lag_5']
     logger.info(f"\nSelected Features used for Training: {selected_features}")
     X_train = X_train[selected_features]   
     X_test = X_test[selected_features]
