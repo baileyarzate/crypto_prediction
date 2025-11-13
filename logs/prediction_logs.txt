@@ -150,3 +150,41 @@
 2025-11-12 18:33:21,027 - INFO -  - Predictor: XGBoost, Prediction: 98411.44
 2025-11-12 18:33:21,027 - INFO - ==============================================
 2025-11-12 18:33:21,027 - INFO - ============================================================
+2025-11-12 18:38:30,062 - INFO - ============================================================
+2025-11-12 18:38:30,063 - INFO - MODELS_DIR: C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\models\20251112_170018
+2025-11-12 18:38:30,063 - INFO - Data Paths: 
+	Quant Data: C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251112_172623\quant\quant_bitcoin_test_20251112_1726.csv
+	Sentiment Data: C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251112_172623\sentiment\google_news_sentiment_20251112_1739_days_20.csv
+	Interest Data: C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251112_172623\interest\interest_rates_test_20251112_1739.csv
+2025-11-12 18:38:30,063 - INFO - Lookback Days (Data): 20
+2025-11-12 18:38:30,063 - INFO - Lookback Hours (Sentiment): 480
+2025-11-12 18:38:30,063 - INFO - Max Results Per Query (Google): 5
+2025-11-12 18:38:30,063 - INFO - Interest Rate Lookback Days (IR): 365
+2025-11-12 18:38:30,721 - INFO - 
+==============================================
+2025-11-12 18:38:30,721 - INFO - Forecast for the Next Day:
+2025-11-12 18:38:30,722 - INFO -  - Predictor: Linear Regression, Prediction: 101669.06
+2025-11-12 18:38:30,722 - INFO -  - Predictor: Ridge Regression, Prediction: 101822.13
+2025-11-12 18:38:30,722 - INFO -  - Predictor: Random Forest, Prediction: 101228.99
+2025-11-12 18:38:30,722 - INFO -  - Predictor: XGBoost, Prediction: 98411.44
+2025-11-12 18:38:30,722 - INFO - ==============================================
+2025-11-12 18:38:30,722 - INFO - ============================================================
+2025-11-12 18:41:49,178 - INFO - ============================================================
+2025-11-12 18:41:49,178 - INFO - MODELS_DIR: C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\models\20251112_170018
+2025-11-12 18:41:49,178 - INFO - Data Paths: 
+	Quant Data: C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251112_172623\quant\quant_bitcoin_test_20251112_1726.csv
+	Sentiment Data: C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251112_172623\sentiment\google_news_sentiment_20251112_1739_days_20.csv
+	Interest Data: C:\Users\baile\Documents\Artificial Intelligence\BitcoinPred\data\20251112_172623\interest\interest_rates_test_20251112_1739.csv
+2025-11-12 18:41:49,178 - INFO - Lookback Days (Data): 20
+2025-11-12 18:41:49,178 - INFO - Lookback Hours (Sentiment): 480
+2025-11-12 18:41:49,178 - INFO - Max Results Per Query (Google): 5
+2025-11-12 18:41:49,178 - INFO - Interest Rate Lookback Days (IR): 365
+2025-11-12 18:41:49,683 - INFO - 
+==============================================
+2025-11-12 18:41:49,683 - INFO - Forecast for the Next Day:
+2025-11-12 18:41:49,683 - INFO -  - Predictor: Linear Regression, Prediction: 101669.06
+2025-11-12 18:41:49,683 - INFO -  - Predictor: Ridge Regression, Prediction: 101822.13
+2025-11-12 18:41:49,685 - INFO -  - Predictor: Random Forest, Prediction: 101228.99
+2025-11-12 18:41:49,685 - INFO -  - Predictor: XGBoost, Prediction: 98411.44
+2025-11-12 18:41:49,685 - INFO - ==============================================
+2025-11-12 18:41:49,685 - INFO - ============================================================
