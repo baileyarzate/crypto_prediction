@@ -26,13 +26,9 @@ python -m venv .venv
 .venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 ```
-```yaml
-
 ### 2. Configure secrets (optional)
-
 Create `.env` in the repo root:
-
-```
+```bash
 GEMINI_API_KEY=your-gemini-key
 SAVE_DIR=C:\path\to\custom\data        # optional override
 ```
