@@ -33,7 +33,6 @@ pip install -r requirements.txt
 Create `.env` in the repo root:
 ```bash
 GEMINI_API_KEY=your-gemini-key
-SAVE_DIR=C:\path\to\custom\data        # optional override
 ```
 
 Gemini is only required if you want AI commentary inside Streamlit.
