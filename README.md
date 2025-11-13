@@ -141,7 +141,7 @@ The Streamlit app and CLI auto-discover these directories, so keeping timestampe
 
 ## Roadmap Ideas
 
-- Expand model zoo (CatBoost/LightGBM, simple LSTM baseline).
+- Expand model zoo (CatBoost/LightGBM, LSTM or Transformer for Hourly/Minute Predictions).
 - Deploy Streamlit as a scheduled Cloud Run/Spaces app.
 - Add automated backtesting metrics and alerting hooks.
 
