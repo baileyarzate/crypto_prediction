@@ -335,7 +335,6 @@ def extract_google_sentiment(
         for query in queries_list:
             try:
                 articles = client.search(query, after=after_date, before=before_date, max_results=cap)
-                max_results_per_query = 5
                 if hours * max_results_per_query > 20:
                     time.sleep(1.05)  # add a 1.05-second pause after each API call
                 api_call_count += 1

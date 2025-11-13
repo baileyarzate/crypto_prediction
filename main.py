@@ -15,6 +15,33 @@ from helpers.data_ingestation import (
     get_quant_data,
     extract_google_sentiment,
 )
+import logging
+# Use the CORRECT file path for Prediction logs
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+PRED_LOG_FILE_PATH = os.path.join(PROJECT_ROOT, 'logs','prediction_logs.txt')
+os.makedirs(os.path.dirname(PRED_LOG_FILE_PATH), exist_ok=True)
+
+# 1. Silencing external loggers
+logging.getLogger("urllib3").setLevel(logging.WARNING) 
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger().setLevel(logging.WARNING) # Silences the root logger
+
+# 2. Get and configure the Prediction Logger
+logger = logging.getLogger('PredictionPipelineLogger')
+logger.setLevel(logging.INFO) 
+# Make sure log messages don't propagate to the silenced root logger
+logger.propagate = False 
+
+if not logger.handlers:
+    # File Handler: Appends to the correct log file
+    file_handler = logging.FileHandler(PRED_LOG_FILE_PATH, mode='a')
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    logger.addHandler(file_handler)
+    
+    # Stream Handler (for console output)
+    # stream_handler = logging.StreamHandler(sys.stdout)
+    # stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+    # logger.addHandler(stream_handler)
 
 import ctypes
 # Prevent system sleep while script is running
@@ -37,7 +64,7 @@ def run_training_pipeline(
     hours: int = 26280,
     batch_size: int = 32,
     model: str = "kk08/CryptoBERT",
-    max_results_per_query: int | None = None,
+    max_results_per_query: int = 5,
     start_date: str | None = None,
     ir_lookback_days: int = 1095,
 ):
@@ -83,10 +110,11 @@ def run_prediction_pipeline(
     hours: int = 480,
     batch_size: int = 32,
     model: str = "kk08/CryptoBERT",
-    max_results_per_query: int | None = None,
+    max_results_per_query: int = 5,
     start_date: str | None = None,
     ir_lookback_days: int = 365,):
-
+    
+    global logger
     if ingest or not (quant_path and google_path and interest_path):
         quant_path, google_path, interest_path = ingest_paths(
             save_dir=save_dir,
@@ -101,11 +129,29 @@ def run_prediction_pipeline(
             start_date=start_date,
             ir_lookback_days=ir_lookback_days,
         )
+
+    logger.info("=" * 60) 
+    logger.info(f"MODELS_DIR: {models_dir}")
+    logger.info(f'Data Paths: \n\tQuant Data: {quant_path}\n\tSentiment Data: {google_path}\n\tInterest Data: {interest_path}')
+    logger.info(f"Lookback Days (Data): {lookback_days}")
+    logger.info(f"Lookback Hours (Sentiment): {hours}")
+    logger.info(f"Max Results Per Query (Google): {max_results_per_query}")
+    logger.info(f"Interest Rate Lookback Days (IR): {ir_lookback_days}")   
+
     df_preprocessed = preprocess_data(quant_path, google_path, interest_path)
     df_preprocessed.columns = df_preprocessed.columns.str.replace('_x$', '', regex=True)
     historical_df = df_preprocessed
     print("--- Starting Prediction ---")
     all_predictions = predict_next_day(historical_df, models_dir)
+    if all_predictions:
+        logger.info("\n==============================================")
+        logger.info("Forecast for the Next Day:")
+        for model_name, pred_price in all_predictions.items():
+            logger.info(f" - Predictor: {model_name}, Prediction: {pred_price:.2f}")
+        logger.info("==============================================")
+    else:
+        logger.warning("Prediction dictionary is empty.")
+    logger.info("=" * 60)
     if all_predictions:
         print("\n==============================================")
         print("Forecast for the Next Day:")
