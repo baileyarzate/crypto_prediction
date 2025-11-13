@@ -16,7 +16,7 @@ import xgboost as xgb
 import logging
 # --- Setup Logging ---
 # Define the log file path relative to the current script's parent directory
-LOG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'logs', 'logs.txt')
+LOG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'logs', 'train_logs.txt')
 os.makedirs(os.path.dirname(LOG_FILE_PATH), exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
@@ -173,7 +173,7 @@ def train_and_evaluate(df, save_artifacts=False, selected_features = None):
     # X_train_scaled = scaler.fit_transform(X_train_rfe)
     # X_test_scaled = scaler.transform(X_test_rfe)
     #######################uncomment block if needed again
-    logger.info("-------------------------------------")
+    logger.info("=" * 60)
     if selected_features is None: 
         selected_features = ['open', 'high', 'low', 'close', 'volume', 'weighted_sentiment', 'lag_1', 'lag_10', 
                          'rolling_mean_5', 'rolling_mean_10', 'rolling_std_10', 'volatility_7', 'momentum_5', 'high_low_spread', 'momentum_x_volume', 'rsi_sq']
@@ -270,3 +270,4 @@ def train_and_evaluate(df, save_artifacts=False, selected_features = None):
         joblib.dump(features, os.path.join(save_dir, 'feature_list.joblib'))
         
         print("--- Artifacts Saved Successfully ---")
+    logger.info("=" * 60)
