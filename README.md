@@ -1,4 +1,4 @@
-# BitcoinPred
+# Bitcoin Prediction
 
 End-to-end pipeline for forecasting Bitcoin’s next-day close. The project ingests market data, engineers technical + macro features, trains a small ensemble of classical models, and surfaces predictions in both a CLI and a Streamlit dashboard (with optional LLM commentary).
 
@@ -26,6 +26,7 @@ python -m venv .venv
 .venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 ```
+```yaml
 
 ### 2. Configure secrets (optional)
 
@@ -77,13 +78,8 @@ python main.py predict --models-dir models/20251112_170018 --ingest
 
 ### Predict from curated CSV paths
 ```bash
-python main.py predict --models-dir models/20251112_170018 \
-    --paths data/20251112_172623/quant/quant_bitcoin_test_20251112_1726.csv \
-            data/20251112_172623/sentiment/google_news_sentiment_20251112_1739_days_20.csv \
-            data/20251112_172623/interest/interest_rates_test_20251112_1739.csv
+#refer to train_with_training_data.ipynb
 ```
-
-All commands accept additional switches (`--exchange`, `--symbol`, `--timeframe`, `--max-results-per-query`, etc.). Use `python main.py --help` for the full matrix.
 
 ---
 
@@ -153,4 +149,6 @@ The Streamlit app and CLI auto-discover these directories, so keeping timestampe
 - Deploy Streamlit as a scheduled Cloud Run/Spaces app.
 - Add automated backtesting metrics and alerting hooks.
 
-Contributions, issues, and feature requests are welcome!
+**helpers/llm_support.py**
+- `get_prompt(predictions, yesterdays_close)`: structured forecasting prompt for LLM
+- `add_citations(response)`: attach citation links if metadata available
